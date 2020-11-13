@@ -22,11 +22,27 @@ public class PCEServicesController {
     private ConcurrentTaskExecutor executor;
 
 
+    public PCEServicesController() {
+
+        this.executor = new ConcurrentTaskExecutor();
+    }
+
     @PostMapping(path = "/uploadTransactions", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Receives a batch movements for upload", httpMethod = "POST")
     public TransactionsUploadResponse uploadTransactions(
             HttpServletRequest httpServletRequest, @RequestBody TransactionsUploadRequest request) {
 
-        return null;
+        Runnable task = () -> processUpload(request);
+        this.executor.execute(task);
+        TransactionsUploadResponse response = new TransactionsUploadResponse();
+        return response;
+    }
+
+
+    private void processUpload(TransactionsUploadRequest request) {
+
+
+        return ;
+
     }
 }
