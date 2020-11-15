@@ -1,21 +1,19 @@
-package com.cgd.TinkAPI.Model;
+package com.cgd.tinkConnector.Model;
 
 import java.util.List;
 
-public class Account {
-
-    private long availableCredit;
-    private long balance;
-    private long reservedAmount;
-    private boolean closed;
-    private String exclusion;
-    private String externalId;
-    private List<String> flags;
-    private String name;
-    private String number;
+public class TinkAccount {
 
 
-    private List<CGDTransaction> transactions;
+    protected long availableCredit;
+    protected long balance;
+    protected long reservedAmount;
+    protected boolean closed;
+    protected String exclusion;
+    protected String externalId;
+    protected List<String> flags;
+    protected String name;
+    protected String number;
 
     public long getAvailableCredit() {
         return availableCredit;
@@ -89,11 +87,5 @@ public class Account {
         this.number = number;
     }
 
-    public List<CGDTransaction> getTransactions() {
-        return transactions;
-    }
 
-    public void setTransactions(List<CGDTransaction> transactions) {
-        this.transactions = transactions;
-    }
 }

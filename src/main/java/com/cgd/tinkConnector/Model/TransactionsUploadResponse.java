@@ -1,9 +1,8 @@
-package com.cgd.TinkAPI.Model;
+package com.cgd.tinkConnector.Model;
 
 public class TransactionsUploadResponse {
 
-
-    private boolean sucess ;
+    private boolean sucess;
 
     public boolean isSucess() {
         return sucess;

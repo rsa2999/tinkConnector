@@ -1,4 +1,4 @@
-package com.cgd.TinkAPI.Model;
+package com.cgd.tinkConnector.Model;
 
 import java.util.Map;
 

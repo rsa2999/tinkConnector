@@ -1,4 +1,4 @@
-package com.cgd.TinkAPI.Model;
+package com.cgd.tinkConnector.Model;
 
 import java.util.List;
 
@@ -7,7 +7,7 @@ public class TransactionsUploadRequest {
     private long numClient;
     private String tinkId;
     private boolean isFinalRequest;
-    private List<Account> accounts;
+    private List<CGDAccount> accounts;
     private String subscriptionId;
 
     public long getNumClient() {
@@ -34,11 +34,11 @@ public class TransactionsUploadRequest {
         isFinalRequest = finalRequest;
     }
 
-    public List<Account> getAccounts() {
+    public List<CGDAccount> getAccounts() {
         return accounts;
     }
 
-    public void setAccounts(List<Account> accounts) {
+    public void setAccounts(List<CGDAccount> accounts) {
         this.accounts = accounts;
     }
 

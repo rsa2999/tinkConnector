@@ -1,6 +1,5 @@
 rootProject.name = 'tinkConnector'
 
 include 'tinkConnector'
-include 'TinkAPI'
-include 'TinkConnectorBatchProcessor'
+
 
