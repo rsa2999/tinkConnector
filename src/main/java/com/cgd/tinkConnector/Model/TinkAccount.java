@@ -5,9 +5,9 @@ import java.util.List;
 public class TinkAccount {
 
 
-    protected long availableCredit;
-    protected long balance;
-    protected long reservedAmount;
+    protected float availableCredit;
+    protected float balance;
+    protected float reservedAmount;
     protected boolean closed;
     protected String exclusion;
     protected String externalId;
@@ -15,27 +15,27 @@ public class TinkAccount {
     protected String name;
     protected String number;
 
-    public long getAvailableCredit() {
+    public float getAvailableCredit() {
         return availableCredit;
     }
 
-    public void setAvailableCredit(long availableCredit) {
+    public void setAvailableCredit(float availableCredit) {
         this.availableCredit = availableCredit;
     }
 
-    public long getBalance() {
+    public float getBalance() {
         return balance;
     }
 
-    public void setBalance(long balance) {
+    public void setBalance(float balance) {
         this.balance = balance;
     }
 
-    public long getReservedAmount() {
+    public float getReservedAmount() {
         return reservedAmount;
     }
 
-    public void setReservedAmount(long reservedAmount) {
+    public void setReservedAmount(float reservedAmount) {
         this.reservedAmount = reservedAmount;
     }
 

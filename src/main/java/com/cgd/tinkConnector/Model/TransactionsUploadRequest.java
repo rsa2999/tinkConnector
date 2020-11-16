@@ -7,7 +7,7 @@ public class TransactionsUploadRequest {
     private long numClient;
     private String tinkId;
     private boolean isFinalRequest;
-    private List<CGDAccount> accounts;
+    private List<TinkAccount> accounts;
     private String subscriptionId;
 
     public long getNumClient() {
@@ -34,11 +34,11 @@ public class TransactionsUploadRequest {
         isFinalRequest = finalRequest;
     }
 
-    public List<CGDAccount> getAccounts() {
+    public List<TinkAccount> getAccounts() {
         return accounts;
     }
 
-    public void setAccounts(List<CGDAccount> accounts) {
+    public void setAccounts(List<TinkAccount> accounts) {
         this.accounts = accounts;
     }
 

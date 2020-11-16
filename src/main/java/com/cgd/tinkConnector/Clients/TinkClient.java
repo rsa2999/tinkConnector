@@ -1,5 +1,8 @@
 package com.cgd.tinkConnector.Clients;
 
+import com.cgd.tinkConnector.Model.IngestAccountsRequest;
+import com.cgd.tinkConnector.Model.IngestAccountsResponse;
+import com.cgd.tinkConnector.Model.TinkAccount;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -10,7 +13,17 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
+
 public class TinkClient {
+
+    public static final String ALL_SCOPES = "accounts:read,accounts:write,activities:read,budgets:read,budgets:write,"
+            + "calendar:read,categories:read,contacts:read,credentials:read,credentials:refresh,credentials:write,"
+            + "documents:read,documents:write,follow:read,follow:write,insights:read,insights:write,kyc:read,kyc:write,"
+            + "payment:read,payment:write,transfer:read,transfer:execute,transfer:update,settings:read,settings:write,"
+            + "statistics:read,tracking:read,tracking:write,transactions:categorize,transactions:read,"
+            + "transactions:write,user:read,user:write,user:web_hooks,suggestions:read,streaming:access,"
+            + "properties:read,properties:write,providers:read,investments:read,identity:read,identity:write";
 
     private String clientId;
     private String clientSecret;
@@ -23,7 +36,7 @@ public class TinkClient {
         this.clientSecret = clientSecret;
     }
 
-    private OAuthToken token(String grantType, String scope, String code, String refreshToken) throws HttpClientErrorException {
+    public OAuthToken token(String grantType, String scope, String code, String refreshToken) throws HttpClientErrorException {
         //LOGGER.info("{} token(): begin...", username);
 
         HttpHeaders headers = new HttpHeaders();
@@ -58,6 +71,32 @@ public class TinkClient {
 
         return ret;
     }
+
+    public IngestAccountsResponse ingestAccounts(String accessToken, String tinkId, List<TinkAccount> accounts) throws HttpClientErrorException {
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+        headers.setBearerAuth(accessToken);
+
+        IngestAccountsRequest req = new IngestAccountsRequest();
+
+        req.setAccounts(accounts);
+
+        HttpEntity<IngestAccountsRequest> request = new HttpEntity<>(req, headers);
+        ResponseEntity<IngestAccountsResponse> response;
+
+        response = this.client.postForEntity(
+                String.format("/connector/users/%s/accounts", tinkId),
+                request,
+                IngestAccountsResponse.class);
+
+        // LOGGER.info("createUser(): TINK user created.; externalUserId={}, status code={}", externalUserId, response.getStatusCode());
+
+        return response.getBody();
+
+
+    }
+
 
     public class OAuthToken {
 
