@@ -1,9 +1,10 @@
 package com.cgd.tinkConnector.Clients;
 
-import com.cgd.tinkConnector.Model.IngestAccountsRequest;
-import com.cgd.tinkConnector.Model.IngestAccountsResponse;
-import com.cgd.tinkConnector.Model.TinkAccount;
+import com.cgd.tinkConnector.Model.*;
+import com.cgd.tinkConnector.PCEServicesController;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -16,6 +17,9 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 
 public class TinkClient {
+
+    private static Logger LOGGER = LoggerFactory.getLogger(PCEServicesController.class);
+
 
     public static final String ALL_SCOPES = "accounts:read,accounts:write,activities:read,budgets:read,budgets:write,"
             + "calendar:read,categories:read,contacts:read,credentials:read,credentials:refresh,credentials:write,"
@@ -89,6 +93,33 @@ public class TinkClient {
                 String.format("/connector/users/%s/accounts", tinkId),
                 request,
                 IngestAccountsResponse.class);
+
+        // LOGGER.info("createUser(): TINK user created.; externalUserId={}, status code={}", externalUserId, response.getStatusCode());
+
+        return response.getBody();
+
+
+    }
+
+    public IngestTransactionsResponse ingestTransactions(String accessToken, String tinkId, List<TinkTransactionAccount> accounts) throws HttpClientErrorException {
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+        headers.setBearerAuth(accessToken);
+
+        IngestTransactionsRequest req = new IngestTransactionsRequest();
+
+        req.setAutoBook(false);
+        req.setOverridePending(false);
+        req.setTransactionAccounts(accounts);
+
+        HttpEntity<IngestTransactionsRequest> request = new HttpEntity<>(req, headers);
+        ResponseEntity<IngestTransactionsResponse> response;
+
+        response = this.client.postForEntity(
+                String.format("/connector/users/%s/transactions", tinkId),
+                request,
+                IngestTransactionsResponse.class);
 
         // LOGGER.info("createUser(): TINK user created.; externalUserId={}, status code={}", externalUserId, response.getStatusCode());
 

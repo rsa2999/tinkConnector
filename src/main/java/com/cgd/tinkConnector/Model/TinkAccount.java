@@ -4,7 +4,6 @@ import java.util.List;
 
 public class TinkAccount {
 
-
     protected float availableCredit;
     protected float balance;
     protected float reservedAmount;

@@ -1,9 +1,18 @@
 package com.cgd.tinkConnector.Clients;
 
+import com.cgd.tinkConnector.Model.TinkCardSubscriptionCheckRequest;
+import com.cgd.tinkConnector.Model.TinkCardSubscriptionCheckResponse;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
+
 public class CGDClient {
+
+
+    public static final String CGD_CLIENT_SYSTEM = "CGD_APP";
 
     private RestTemplate client;
 
@@ -15,15 +24,53 @@ public class CGDClient {
     private HttpHeaders getHeaders() {
 
         HttpHeaders headers = new HttpHeaders();
-/*
-        headers.add("user-agent", userAgent);
+
+        headers.add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36");
         headers.add("x-cgd-client-system", CGD_CLIENT_SYSTEM);
-        headers.add("x-cgd-app-name", appName);
-        headers.add("x-cgd-app-device", cgdAppDevice);
-        headers.add("x-cgd-app-version", deviceAppVersion);
-        headers.add("x-cgd-app-language", language);
-*/
+        headers.add("x-cgd-app-name", "APP_DABOX_NON_CUSTOMERS");
+        headers.add("x-cgd-app-device", "as4");
+        headers.add("x-cgd-app-version", "1.0.0");
+        headers.add("x-cgd-app-language", "pt");
+
         return headers;
+    }
+
+    public TinkCardSubscriptionCheckResponse checkTinkCardSubscriptions() {
+
+        HttpHeaders headers = this.getHeaders();
+
+
+        TinkCardSubscriptionCheckRequest req = new TinkCardSubscriptionCheckRequest();
+
+        HttpEntity<TinkCardSubscriptionCheckRequest> request = new HttpEntity<>(req, headers);
+        ResponseEntity<TinkCardSubscriptionCheckResponse> response;
+        response = this.client.postForEntity(
+                "/business/dabox/cards/check",
+                request,
+                TinkCardSubscriptionCheckResponse.class);
+
+        return response.getBody();
+
+
+    }
+
+    public TinkCardSubscriptionCheckResponse updateTinkCardSubscriptions(int subscriptionType, List<Long> clientNumbers) {
+
+        HttpHeaders headers = this.getHeaders();
+
+
+        TinkCardSubscriptionCheckRequest req = new TinkCardSubscriptionCheckRequest();
+
+        HttpEntity<TinkCardSubscriptionCheckRequest> request = new HttpEntity<>(req, headers);
+        ResponseEntity<TinkCardSubscriptionCheckResponse> response;
+        response = this.client.postForEntity(
+                "/business/dabox/cards/updatestate",
+                request,
+                TinkCardSubscriptionCheckResponse.class);
+
+        return response.getBody();
+
+
     }
 
 }
