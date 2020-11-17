@@ -1,6 +1,7 @@
 package com.cgd.tinkConnector;
 
 import com.cgd.tinkConnector.Clients.CGDClient;
+import com.cgd.tinkConnector.Clients.OAuthToken;
 import com.cgd.tinkConnector.Clients.TinkClient;
 import com.cgd.tinkConnector.Model.*;
 import com.cgd.tinkConnector.Repositories.UploadRequestsRepository;
@@ -57,10 +58,18 @@ public class PCEServicesController extends BaseController {
 
     private void processUpload(TransactionsUploadRequest request) {
 
-        try {
+     //   try {
+
+        CGDClient cgdClient = new CGDClient(this.cgdSvc);
+
+        List<Long> clientNumber = new ArrayList<>();
+        clientNumber.add(request.getNumClient());
+
+        cgdClient.updateTinkCardSubscriptions(request.getSubscriptionType(), clientNumber);
+
 
             TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
-            TinkClient.OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
+            OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
 
             List<TinkAccount> tinkAccounts = new ArrayList<>();
 
@@ -78,18 +87,13 @@ public class PCEServicesController extends BaseController {
 
             tinkClient.ingestTransactions(svcToken.getAccessToken(), request.getTinkId(), transactions);
 
-            CGDClient cgdClient = new CGDClient(this.cgdSvc);
-
-            List<Long> clientNumber = new ArrayList<>();
-            clientNumber.add(request.getNumClient());
-
-            cgdClient.updateTinkCardSubscriptions(request.getSubscriptionType(), clientNumber);
 
 
-        } catch (Exception e) {
+
+        //} catch (Exception e) {
 
 
-        }
+        //}
 
 
     }

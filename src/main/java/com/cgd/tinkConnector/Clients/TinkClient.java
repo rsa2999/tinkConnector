@@ -20,7 +20,6 @@ public class TinkClient {
 
     private static Logger LOGGER = LoggerFactory.getLogger(PCEServicesController.class);
 
-
     public static final String ALL_SCOPES = "accounts:read,accounts:write,activities:read,budgets:read,budgets:write,"
             + "calendar:read,categories:read,contacts:read,credentials:read,credentials:refresh,credentials:write,"
             + "documents:read,documents:write,follow:read,follow:write,insights:read,insights:write,kyc:read,kyc:write,"
@@ -31,10 +30,10 @@ public class TinkClient {
 
     private String clientId;
     private String clientSecret;
-
     private RestTemplate client;
 
     public TinkClient(RestTemplate client, String clientId, String clientSecret) {
+
         this.client = client;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
@@ -42,6 +41,8 @@ public class TinkClient {
 
     public OAuthToken token(String grantType, String scope, String code, String refreshToken) throws HttpClientErrorException {
         //LOGGER.info("{} token(): begin...", username);
+
+
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -129,58 +130,6 @@ public class TinkClient {
     }
 
 
-    public class OAuthToken {
-
-        @JsonProperty("access_token")
-        private String accessToken;
-        @JsonProperty("token_type")
-        private String tokenType;
-        @JsonProperty("expires_in")
-        private Integer expiresIn;
-        private String scope;
-        @JsonProperty("refresh_token")
-        private String refreshToken;
-
-        public String getAccessToken() {
-            return accessToken;
-        }
-
-        public void setAccessToken(String accessToken) {
-            this.accessToken = accessToken;
-        }
-
-        public String getTokenType() {
-            return tokenType;
-        }
-
-        public void setTokenType(String tokenType) {
-            this.tokenType = tokenType;
-        }
-
-        public Integer getExpiresIn() {
-            return expiresIn;
-        }
-
-        public void setExpiresIn(Integer expiresIn) {
-            this.expiresIn = expiresIn;
-        }
-
-        public String getScope() {
-            return scope;
-        }
-
-        public void setScope(String scope) {
-            this.scope = scope;
-        }
-
-        public String getRefreshToken() {
-            return refreshToken;
-        }
-
-        public void setRefreshToken(String refreshToken) {
-            this.refreshToken = refreshToken;
-        }
-    }
 
     public static class OAuthGrant {
 

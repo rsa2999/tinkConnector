@@ -60,6 +60,8 @@ public class CGDClient {
 
 
         TinkCardSubscriptionCheckRequest req = new TinkCardSubscriptionCheckRequest();
+        req.setClientNumbers(clientNumbers);
+        req.setSubscriptionType(subscriptionType);
 
         HttpEntity<TinkCardSubscriptionCheckRequest> request = new HttpEntity<>(req, headers);
         ResponseEntity<TinkCardSubscriptionCheckResponse> response;
