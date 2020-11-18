@@ -3,19 +3,19 @@ package com.cgd.tinkConnector;
 import com.cgd.tinkConnector.Clients.CGDClient;
 import com.cgd.tinkConnector.Clients.OAuthToken;
 import com.cgd.tinkConnector.Clients.TinkClient;
+import com.cgd.tinkConnector.Clients.TinkServices;
 import com.cgd.tinkConnector.Model.*;
-import com.cgd.tinkConnector.Repositories.UploadRequestsRepository;
 import com.cgd.tinkConnector.Utils.ConversionUtils;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.concurrent.ConcurrentTaskExecutor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.annotation.RequestScope;
 
@@ -32,8 +32,6 @@ public class PCEServicesController extends BaseController {
 
     private ConcurrentTaskExecutor executor;
 
-    @Autowired
-    private UploadRequestsRepository requestsRepository;
 
     public PCEServicesController(RestTemplate cgdRestTemplate, RestTemplate tinkRestTemplate, String clientId, String clientSecret) {
 
@@ -58,14 +56,9 @@ public class PCEServicesController extends BaseController {
 
     private void processUpload(TransactionsUploadRequest request) {
 
-     //   try {
 
-        CGDClient cgdClient = new CGDClient(this.cgdSvc);
-
-        List<Long> clientNumber = new ArrayList<>();
-        clientNumber.add(request.getNumClient());
-
-        cgdClient.updateTinkCardSubscriptions(request.getSubscriptionType(), clientNumber);
+        boolean hasErrors = false;
+        try {
 
 
             TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
@@ -82,18 +75,51 @@ public class PCEServicesController extends BaseController {
                 acc.setReservedAmount(ConversionUtils.formatAmmount(acc.getReservedAmount()));
                 tinkAccounts.add(acc.toTinkAccount());
                 transactions.add(acc.toTransactionAccount());
+
+                for (CGDTransaction t : acc.getTransactions()) {
+
+                    t.setTinkId(request.getTinkId());
+                    t.setAmount(ConversionUtils.formatAmmount(t.getAmount()));
+                }
             }
-            tinkClient.ingestAccounts(svcToken.getAccessToken(), request.getTinkId(), tinkAccounts);
 
-            tinkClient.ingestTransactions(svcToken.getAccessToken(), request.getTinkId(), transactions);
+            try {
 
+                tinkClient.ingestAccounts(svcToken.getAccessToken(), request.getTinkId(), tinkAccounts);
+                registerServiceCall(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), tinkAccounts);
 
+            } catch (HttpClientErrorException e) {
 
+                LOGGER.error(String.format("processUpload : subscription %d", request.getSubscriptionId()), e);
+                registerServiceCallWithError(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), tinkAccounts, e);
+                hasErrors = true;
+            }
 
-        //} catch (Exception e) {
+            try {
 
+                tinkClient.ingestTransactions(svcToken.getAccessToken(), request.getTinkId(), transactions);
+                registerServiceCall(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), transactions);
 
-        //}
+            } catch (HttpClientErrorException e) {
+
+                LOGGER.error(String.format("processUpload : subscription %d", request.getSubscriptionId()), e);
+                registerServiceCallWithError(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions, e);
+                hasErrors = true;
+            }
+
+            if (!hasErrors) {
+
+                CGDClient cgdClient = new CGDClient(this.cgdSvc);
+                List<Long> clientNumber = new ArrayList<>();
+                clientNumber.add(request.getNumClient());
+                cgdClient.updateTinkCardSubscriptions(request.getSubscriptionType(), clientNumber);
+            }
+
+        } catch (Exception e) {
+
+            LOGGER.error(String.format("processUpload : subscription %d", request.getSubscriptionId()), e);
+
+        }
 
 
     }

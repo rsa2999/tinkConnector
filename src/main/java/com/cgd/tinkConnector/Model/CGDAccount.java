@@ -44,7 +44,7 @@ public class CGDAccount extends TinkAccount {
         ac.setExclusion(this.getExclusion());
         ac.setFlags(this.getFlags());
         ac.setName(this.getName());
-        ac.setNumber(this.getNumber());
+        ac.setNumber(this.getPlasticNumber());
         return ac;
     }
 }

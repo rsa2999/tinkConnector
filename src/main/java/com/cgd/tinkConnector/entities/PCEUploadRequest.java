@@ -17,6 +17,30 @@ public class PCEUploadRequest {
     private Date requestDate;
     private int statusCode;
 
+    @Lob
+    private String payload;
+
+    @Lob
+    private String error;
+
+    private int serviceId;
+
+    public String getPayload() {
+        return payload;
+    }
+
+    public void setPayload(String payload) {
+        this.payload = payload;
+    }
+
+    public int getServiceId() {
+        return serviceId;
+    }
+
+    public void setServiceId(int serviceId) {
+        this.serviceId = serviceId;
+    }
+
     public Long getRequestId() {
         return requestId;
     }
@@ -63,5 +87,13 @@ public class PCEUploadRequest {
 
     public void setStatusCode(int statusCode) {
         this.statusCode = statusCode;
+    }
+
+    public String getError() {
+        return error;
+    }
+
+    public void setError(String error) {
+        this.error = error;
     }
 }

@@ -4,7 +4,7 @@ import java.util.Map;
 
 public class CGDTransaction {
 
-    private long amount;
+    private float amount;
     private long date;
     private String description;
     private String externalId;
@@ -13,7 +13,11 @@ public class CGDTransaction {
     private String tinkId;
     private String type;
 
-    public long getAmount() {
+    public void setAmount(float amount) {
+        this.amount = amount;
+    }
+
+    public float getAmount() {
         return amount;
     }
 

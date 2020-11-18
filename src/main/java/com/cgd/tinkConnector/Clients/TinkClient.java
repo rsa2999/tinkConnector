@@ -2,7 +2,6 @@ package com.cgd.tinkConnector.Clients;
 
 import com.cgd.tinkConnector.Model.*;
 import com.cgd.tinkConnector.PCEServicesController;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -43,7 +42,6 @@ public class TinkClient {
         //LOGGER.info("{} token(): begin...", username);
 
 
-
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
@@ -78,6 +76,7 @@ public class TinkClient {
     }
 
     public IngestAccountsResponse ingestAccounts(String accessToken, String tinkId, List<TinkAccount> accounts) throws HttpClientErrorException {
+
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
@@ -128,7 +127,6 @@ public class TinkClient {
 
 
     }
-
 
 
     public static class OAuthGrant {
