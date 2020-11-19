@@ -1,5 +1,8 @@
 package com.cgd.tinkConnector;
 
+import net.javacrumbs.shedlock.core.LockProvider;
+import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
+import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -20,6 +23,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
@@ -28,6 +32,7 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
+import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -38,6 +43,8 @@ import java.util.Map;
 
 @Configuration
 @EnableScheduling
+
+@EnableSchedulerLock(defaultLockAtMostFor = "10m")
 public class TinkConnectorConfiguration {
 
 
@@ -239,5 +246,21 @@ public class TinkConnectorConfiguration {
     public java.lang.String clientSecret(@Value("${tink.clientSecret}") String clientSecret) {
         return clientSecret;
     }
+
+    @Bean
+    public LockProvider lockProvider(DataSource dataSource) {
+        return new JdbcTemplateLockProvider(
+                JdbcTemplateLockProvider.Configuration.builder()
+                        .withJdbcTemplate(new JdbcTemplate(dataSource))
+                        .usingDbTime() // Works on Postgres, MySQL, MariaDb, MS SQL, Oracle, DB2, HSQL and H2
+                        .build()
+        );
+    }
+/*
+    @Bean
+    public java.lang.String batchFileHost(@Value("${cgd.batchJob.sshHost }") String batchFileHost) {
+        return batchFileHost;
+    }
+*/
 
 }

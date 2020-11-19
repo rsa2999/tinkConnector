@@ -13,7 +13,15 @@ repositories {
 }
 
 dependencies {
-
+// https://mvnrepository.com/artifact/net.javacrumbs.shedlock/shedlock-spring
+    // compile group: 'net.javacrumbs.shedlock', name: 'shedlock-spring', version: '4.15.1'
+/*
+    < artifactId > shedlock - provider - jdbc - template < /artifactId>
+    <version>4.15.1</ version >
+*/
+    implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:4.15.1'
+    implementation 'net.javacrumbs.shedlock:shedlock-spring:4.15.1'
+    implementation 'com.hierynomus:sshj:0.30.0'
     implementation 'org.apache.httpcomponents:httpclient:4.5.13'
     //implementation project(':TinkAPI')
     implementation 'io.springfox:springfox-swagger2:3.0.0'

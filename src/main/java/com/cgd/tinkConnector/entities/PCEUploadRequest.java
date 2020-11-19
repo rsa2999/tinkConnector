@@ -1,15 +1,18 @@
 package com.cgd.tinkConnector.entities;
 
+
 import javax.persistence.*;
 import java.util.Date;
 
 @Entity
-@Table(name = "pceuploadsrequests")
+@Table(name = "pceuploadsrequests",
+        indexes = {@Index(name = "idx_num_client", columnList = "numClient", unique = false), @Index(name = "idx_tinkId", columnList = "tinkId", unique = false)})
 public class PCEUploadRequest {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long requestId;
+
 
     private long numClient;
     private String tinkId;
