@@ -1,6 +1,8 @@
 package com.cgd.tinkConnector;
 
-import com.cgd.tinkConnector.Model.TransactionsUploadRequest;
+import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
+import com.cgd.tinkConnector.Repositories.TinkUserAccountsRepository;
+import com.cgd.tinkConnector.Repositories.TinkUsersRepository;
 import com.cgd.tinkConnector.Repositories.UploadRequestsRepository;
 import com.cgd.tinkConnector.entities.PCEUploadRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,6 +26,12 @@ public class BaseController {
 
     @Autowired
     protected UploadRequestsRepository requestsRepository;
+
+    @Autowired
+    protected TinkUsersRepository usersRepository;
+
+    @Autowired
+    protected TinkUserAccountsRepository accountsRepository;
 
     protected void registerServiceCall(TransactionsUploadRequest request, int serviceId, Object payload) {
 

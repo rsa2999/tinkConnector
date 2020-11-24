@@ -1,7 +1,7 @@
 package com.cgd.tinkConnector.Clients;
 
-import com.cgd.tinkConnector.Model.TinkCardSubscriptionCheckRequest;
-import com.cgd.tinkConnector.Model.TinkCardSubscriptionCheckResponse;
+import com.cgd.tinkConnector.Model.IO.TinkCardSubscriptionCheckRequest;
+import com.cgd.tinkConnector.Model.IO.TinkCardSubscriptionCheckResponse;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;

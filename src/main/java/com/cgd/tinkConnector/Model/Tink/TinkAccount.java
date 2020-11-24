@@ -1,18 +1,25 @@
-package com.cgd.tinkConnector.Model;
-
-import java.util.List;
+package com.cgd.tinkConnector.Model.Tink;
 
 public class TinkAccount {
 
-    protected float availableCredit;
-    protected float balance;
-    protected float reservedAmount;
-    protected boolean closed;
-    protected String exclusion;
-    protected String externalId;
-    protected List<String> flags;
-    protected String name;
-    protected String number;
+    private float availableCredit;
+    private float balance;
+    private float reservedAmount;
+    private boolean closed;
+    //private String exclusion;
+    private String externalId;
+    //  private List<String> flags;
+    private String name;
+    private String number;
+    private String type;
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
 
     public float getAvailableCredit() {
         return availableCredit;
@@ -46,13 +53,6 @@ public class TinkAccount {
         this.closed = closed;
     }
 
-    public String getExclusion() {
-        return exclusion;
-    }
-
-    public void setExclusion(String exclusion) {
-        this.exclusion = exclusion;
-    }
 
     public String getExternalId() {
         return externalId;
@@ -60,14 +60,6 @@ public class TinkAccount {
 
     public void setExternalId(String externalId) {
         this.externalId = externalId;
-    }
-
-    public List<String> getFlags() {
-        return flags;
-    }
-
-    public void setFlags(List<String> flags) {
-        this.flags = flags;
     }
 
     public String getName() {
@@ -85,6 +77,4 @@ public class TinkAccount {
     public void setNumber(String number) {
         this.number = number;
     }
-
-
 }

@@ -1,13 +1,15 @@
 package com.cgd.tinkConnector.Clients;
 
-import com.cgd.tinkConnector.Model.*;
+import com.cgd.tinkConnector.Model.IO.*;
+import com.cgd.tinkConnector.Model.Tink.TinkAccount;
+import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
 import com.cgd.tinkConnector.PCEServicesController;
+import com.cgd.tinkConnector.entities.TinkUsers;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
@@ -25,7 +27,12 @@ public class TinkClient {
             + "payment:read,payment:write,transfer:read,transfer:execute,transfer:update,settings:read,settings:write,"
             + "statistics:read,tracking:read,tracking:write,transactions:categorize,transactions:read,"
             + "transactions:write,user:read,user:write,user:web_hooks,suggestions:read,streaming:access,"
-            + "properties:read,properties:write,providers:read,investments:read,identity:read,identity:write";
+            + "properties:read,properties:write,providers:read,investments:read,identity:read,identity:write,authorization:grant";
+
+    public static final String USER_SCOPE = "accounts:read,accounts:write,user:read,transactions:read,transactions:write,credentials:read,credentials:refresh,credentials:write";
+
+
+    private static final String BASE_URL = "";
 
     private String clientId;
     private String clientSecret;
@@ -36,6 +43,79 @@ public class TinkClient {
         this.client = client;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+    }
+
+/*
+    url -X POST https://api.tink.com/api/v1/oauth/authorization-grant \
+            -H 'Authorization: Bearer {YOUR_CLIENT_ACCESS_TOKEN}' \
+            -d 'user_id=CREATED_USER_ID' \
+            -d 'scope=accounts:read,transactions:read,user:read,credentials:read,credentials:refresh,credentials:write'
+*/
+
+    public OAuthGrant usertoken(String accessToken, String tinkUserId, String scope) throws HttpClientErrorException {
+
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        //headers.add("Authorization", String.format("Bearer %s", accessToken));
+        headers.setBearerAuth(accessToken);
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        //form.add("external_user_id", tinkUserId);
+        form.add("user_id", tinkUserId);
+        form.add("scope", scope);
+
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(form, headers);
+        ResponseEntity<OAuthGrant> response;
+
+        response = this.client.postForEntity(
+                "/api/v1/oauth/authorization-grant",
+                request,
+                OAuthGrant.class);
+
+        OAuthGrant ret = response.getBody();
+
+
+        return ret;
+
+
+    }
+/*
+    public OAuthGrant grant(String accessToken, String externalUserId) throws HttpClientErrorException {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setBearerAuth(accessToken);
+
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("user_id", externalUserId);
+        form.add("scope", ALL_SCOPES);
+        //form.add("scope", "credentials:read,credentials:refresh,user:read");
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(form, headers);
+        ResponseEntity<OAuthGrant> response;
+
+        response = this.client.postForEntity(
+                "/oauth/authorization-grant",
+                request,
+                OAuthGrant.class);
+
+        return response.getBody();
+    }
+*/
+
+    public TinkUsers getUser(String accessToken) {
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity request = new HttpEntity(headers);
+        ResponseEntity<TinkUsers> response = this.client.exchange(
+                "/api/v1/user",
+                HttpMethod.GET,
+                request,
+                TinkUsers.class
+        );
+        return response.getBody();
     }
 
     public OAuthToken token(String grantType, String scope, String code, String refreshToken) throws HttpClientErrorException {
@@ -64,7 +144,7 @@ public class TinkClient {
         ResponseEntity<OAuthToken> response;
 
         response = this.client.postForEntity(
-                "/oauth/token",
+                "/api/v1/oauth/token",
                 request,
                 OAuthToken.class);
 
@@ -75,7 +155,25 @@ public class TinkClient {
         return ret;
     }
 
-    public IngestAccountsResponse ingestAccounts(String accessToken, String tinkId, List<TinkAccount> accounts) throws HttpClientErrorException {
+
+    public TinkUserCredentialResponse getUserCredentials(String accessToken) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity request = new HttpEntity(headers);
+        ResponseEntity<TinkUserCredentialResponse> response = this.client.exchange(
+                "/api/v1/credentials/list",
+                HttpMethod.GET,
+                request,
+                TinkUserCredentialResponse.class
+        );
+        return response.getBody();
+
+    }
+
+    public IngestAccountsResponse ingestAccounts(String accessToken, String externalUserId, List<TinkAccount> accounts) throws HttpClientErrorException {
+
+        ObjectMapper mapper = new ObjectMapper();
 
 
         HttpHeaders headers = new HttpHeaders();
@@ -85,12 +183,17 @@ public class TinkClient {
         IngestAccountsRequest req = new IngestAccountsRequest();
 
         req.setAccounts(accounts);
-
+        try {
+            String x = mapper.writeValueAsString(req);
+            System.out.println(x);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
         HttpEntity<IngestAccountsRequest> request = new HttpEntity<>(req, headers);
         ResponseEntity<IngestAccountsResponse> response;
 
         response = this.client.postForEntity(
-                String.format("/connector/users/%s/accounts", tinkId),
+                String.format("/connector/users/%s/accounts", externalUserId),
                 request,
                 IngestAccountsResponse.class);
 
@@ -101,7 +204,7 @@ public class TinkClient {
 
     }
 
-    public IngestTransactionsResponse ingestTransactions(String accessToken, String tinkId, List<TinkTransactionAccount> accounts) throws HttpClientErrorException {
+    public IngestTransactionsResponse ingestTransactions(String accessToken, TinkUsers user, List<TinkTransactionAccount> accounts) throws HttpClientErrorException {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
@@ -117,7 +220,7 @@ public class TinkClient {
         ResponseEntity<IngestTransactionsResponse> response;
 
         response = this.client.postForEntity(
-                String.format("/connector/users/%s/transactions", tinkId),
+                String.format("/connector/users/%s/transactions", user.getExternalUserId()),
                 request,
                 IngestTransactionsResponse.class);
 
@@ -129,16 +232,4 @@ public class TinkClient {
     }
 
 
-    public static class OAuthGrant {
-
-        private String code;
-
-        public String getCode() {
-            return code;
-        }
-
-        public void setCode(String code) {
-            this.code = code;
-        }
-    }
 }

@@ -1,4 +1,7 @@
-package com.cgd.tinkConnector.Model;
+package com.cgd.tinkConnector.Model.IO;
+
+import com.cgd.tinkConnector.Model.CGDAccount;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
 
@@ -6,10 +9,21 @@ public class TransactionsUploadRequest {
 
     private long numClient;
     private String tinkId;
+    @JsonIgnore
     private boolean isFinalRequest;
-    private List<CGDAccount> accounts;
+
     private String subscriptionId;
     private int subscriptionType;
+    private long numContrato;
+    private List<CGDAccount> accounts;
+
+    public long getNumContrato() {
+        return numContrato;
+    }
+
+    public void setNumContrato(long numContrato) {
+        this.numContrato = numContrato;
+    }
 
     public int getSubscriptionType() {
         return subscriptionType;

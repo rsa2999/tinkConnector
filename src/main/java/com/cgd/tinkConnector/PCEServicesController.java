@@ -1,11 +1,14 @@
 package com.cgd.tinkConnector;
 
-import com.cgd.tinkConnector.Clients.CGDClient;
-import com.cgd.tinkConnector.Clients.OAuthToken;
-import com.cgd.tinkConnector.Clients.TinkClient;
-import com.cgd.tinkConnector.Clients.TinkServices;
-import com.cgd.tinkConnector.Model.*;
-import com.cgd.tinkConnector.Utils.ConversionUtils;
+import com.cgd.tinkConnector.Clients.*;
+import com.cgd.tinkConnector.Model.CGDAccount;
+import com.cgd.tinkConnector.Model.CGDTransaction;
+import com.cgd.tinkConnector.Model.IO.*;
+import com.cgd.tinkConnector.Model.Tink.TinkAccount;
+import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
+import com.cgd.tinkConnector.entities.TinkUserAccounts;
+import com.cgd.tinkConnector.entities.TinkUserAccountsId;
+import com.cgd.tinkConnector.entities.TinkUsers;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,8 +23,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.annotation.RequestScope;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestScope
@@ -29,9 +31,7 @@ import java.util.List;
 public class PCEServicesController extends BaseController {
 
     private static Logger LOGGER = LoggerFactory.getLogger(PCEServicesController.class);
-
     private ConcurrentTaskExecutor executor;
-
 
     public PCEServicesController(RestTemplate cgdRestTemplate, RestTemplate tinkRestTemplate, String clientId, String clientSecret) {
 
@@ -53,56 +53,161 @@ public class PCEServicesController extends BaseController {
         return response;
     }
 
+    @PostMapping(path = "/unsubscribe", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "unsubscribe a user on tink ", httpMethod = "POST")
+    public TinkUnsubscribeResponse unsubscribeFromTink(HttpServletRequest httpServletRequest, @RequestBody TinkUnsubscribeRequest request) {
+
+        Runnable task = () -> processUnsubscribe(request);
+        this.executor.execute(task);
+        TinkUnsubscribeResponse response = new TinkUnsubscribeResponse();
+        return response;
+    }
+
+
+    private boolean uploadAccountsToTink(TinkClient tinkClient, String accessToken, TransactionsUploadRequest request, TinkUsers user, List<TinkAccount> tinkAccounts) {
+
+        if (tinkAccounts.size() == 0) return true;
+
+
+        List<TinkAccount> accountsToSave = new ArrayList<>();
+        try {
+
+            tinkClient.ingestAccounts(accessToken, user.getExternalUserId(), tinkAccounts);
+            accountsToSave.addAll(tinkAccounts);
+
+            registerServiceCall(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), tinkAccounts);
+            return true;
+        } catch (HttpClientErrorException e) {
+
+            LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
+            if (e.getStatusCode().value() == 409) {
+                // uma das contas ja existe ,going account by account mode
+
+                List<TinkAccount> testAccount = new ArrayList<>();
+                for (TinkAccount a : tinkAccounts) {
+
+                    testAccount.clear();
+                    testAccount.add(a);
+                    try {
+                        tinkClient.ingestAccounts(accessToken, user.getExternalUserId(), testAccount);
+
+                    } catch (HttpClientErrorException e1) {
+                        if (e.getStatusCode().value() == 409) {
+
+                            accountsToSave.add(a);
+                        }
+
+                    }
+
+                }
+                return true;
+            }
+            return false;
+        } finally {
+
+            Date now = Calendar.getInstance().getTime();
+
+            for (TinkAccount ac : accountsToSave) {
+
+                TinkUserAccounts ua = new TinkUserAccounts();
+                ua.setId(new TinkUserAccountsId(user.getId(), ac.getExternalId()));
+                ua.setAccountNumber(ac.getNumber());
+                ua.setUploadDate(now);
+                this.accountsRepository.save(ua);
+                //accountsToSave.add(ua);
+            }
+
+
+        }
+
+
+    }
+
+
+    private void processUnsubscribe(TinkUnsubscribeRequest request) {
+
+        TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
+        OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
+
+
+        Optional<TinkUsers> tinkUser = this.usersRepository.findById(request.getTinkId());
+
+        // Get user oauth token
+        OAuthGrant userToken = tinkClient.usertoken(svcToken.getAccessToken(), request.getTinkId(), TinkClient.USER_SCOPE);
+        OAuthToken userAuth = tinkClient.token("authorization_code", null, userToken.getCode(), null);
+
+        if (!tinkUser.isPresent()) {
+
+
+            tinkUser = Optional.of(tinkClient.getUser(userAuth.getAccessToken()));
+            this.usersRepository.save(tinkUser.get());
+        }
+
+        TinkUserCredentialResponse response = tinkClient.getUserCredentials(userAuth.getAccessToken());
+
+    }
 
     private void processUpload(TransactionsUploadRequest request) {
+
+        // ObjectMapper mapper = new ObjectMapper();
 
 
         boolean hasErrors = false;
         try {
 
+            //String x = mapper.writeValueAsString(request);
 
             TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
             OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
+
+
+            Optional<TinkUsers> tinkUser = this.usersRepository.findById(request.getTinkId());
+
+            if (!tinkUser.isPresent()) {
+
+                // Get user oauth token
+                OAuthGrant userToken = tinkClient.usertoken(svcToken.getAccessToken(), request.getTinkId(), TinkClient.USER_SCOPE);
+                OAuthToken userAuth = tinkClient.token("authorization_code", null, userToken.getCode(), null);
+                tinkUser = Optional.of(tinkClient.getUser(userAuth.getAccessToken()));
+                this.usersRepository.save(tinkUser.get());
+            }
 
             List<TinkAccount> tinkAccounts = new ArrayList<>();
 
             List<TinkTransactionAccount> transactions = new ArrayList<>();
 
+            String acountType = "CREDIT_CARD";
+            TinkUserAccountsId accountId = new TinkUserAccountsId();
             for (CGDAccount acc : request.getAccounts()) {
-
-                acc.setAvailableCredit(ConversionUtils.formatAmmount(acc.getAvailableCredit()));
-                acc.setBalance(ConversionUtils.formatAmmount(acc.getBalance()));
-                acc.setReservedAmount(ConversionUtils.formatAmmount(acc.getReservedAmount()));
-                tinkAccounts.add(acc.toTinkAccount());
-                transactions.add(acc.toTransactionAccount());
 
                 for (CGDTransaction t : acc.getTransactions()) {
 
                     t.setTinkId(request.getTinkId());
-                    t.setAmount(ConversionUtils.formatAmmount(t.getAmount()));
+                    // t.setAmount(ConversionUtils.formatAmmount(t.getAmount()));
                 }
+                accountId.setExternalAccountId(acc.getExternalId());
+                accountId.setTinkId(tinkUser.get().getId());
+                Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(accountId);
+
+                if (!dbAccount.isPresent()) {
+                    tinkAccounts.add(acc.toTinkAccount(acountType));
+                }
+
+                transactions.add(acc.toTransactionAccount());
+
             }
+
+            this.uploadAccountsToTink(tinkClient, svcToken.getAccessToken(), request, tinkUser.get(), tinkAccounts);
+
 
             try {
 
-                tinkClient.ingestAccounts(svcToken.getAccessToken(), request.getTinkId(), tinkAccounts);
-                registerServiceCall(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), tinkAccounts);
-
-            } catch (HttpClientErrorException e) {
-
-                LOGGER.error(String.format("processUpload : subscription %d", request.getSubscriptionId()), e);
-                registerServiceCallWithError(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), tinkAccounts, e);
-                hasErrors = true;
-            }
-
-            try {
-
-                tinkClient.ingestTransactions(svcToken.getAccessToken(), request.getTinkId(), transactions);
+                tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser.get(), transactions);
                 registerServiceCall(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), transactions);
 
             } catch (HttpClientErrorException e) {
 
-                LOGGER.error(String.format("processUpload : subscription %d", request.getSubscriptionId()), e);
+                LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
                 registerServiceCallWithError(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions, e);
                 hasErrors = true;
             }
@@ -117,7 +222,7 @@ public class PCEServicesController extends BaseController {
 
         } catch (Exception e) {
 
-            LOGGER.error(String.format("processUpload : subscription %d", request.getSubscriptionId()), e);
+            LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
 
         }
 

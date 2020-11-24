@@ -63,6 +63,6 @@ cgd.batchJob.sshPath=batchFile.txt;
     @Scheduled(cron = "0/10 * * * * *")
     @SchedulerLock(name = "cardsBatchJob")
     public void taskExecution() {
-        System.out.println("Hello World");
+        
     }
 }

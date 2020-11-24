@@ -1,4 +1,4 @@
-package com.cgd.tinkConnector.Model;
+package com.cgd.tinkConnector.Model.IO;
 
 public class TransactionsUploadResponse {
 

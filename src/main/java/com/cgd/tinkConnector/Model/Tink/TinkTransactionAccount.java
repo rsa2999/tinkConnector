@@ -1,4 +1,4 @@
-package com.cgd.tinkConnector.Model;
+package com.cgd.tinkConnector.Model.Tink;
 
 import java.util.List;
 
@@ -10,7 +10,7 @@ public class TinkTransactionAccount {
     private String externalId;
     private List<String> payload;
 
-    private List<CGDTransaction> transactions;
+    private List<TinkTransaction> transactions;
 
     public float getBalance() {
         return balance;
@@ -44,11 +44,11 @@ public class TinkTransactionAccount {
         this.payload = payload;
     }
 
-    public List<CGDTransaction> getTransactions() {
+    public List<TinkTransaction> getTransactions() {
         return transactions;
     }
 
-    public void setTransactions(List<CGDTransaction> transactions) {
+    public void setTransactions(List<TinkTransaction> transactions) {
         this.transactions = transactions;
     }
 }

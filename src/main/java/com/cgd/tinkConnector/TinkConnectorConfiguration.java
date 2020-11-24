@@ -149,8 +149,21 @@ public class TinkConnectorConfiguration {
         factory.setReadTimeout(tinkReadTimeout);
 
         RestTemplate ret = new RestTemplate(factory);
-        ret.setUriTemplateHandler(new DefaultUriBuilderFactory(baseUrl));
+/*
+        if (useInterceptores) {
 
+            List<ClientHttpRequestInterceptor> interceptors
+                    = ret.getInterceptors();
+            if (CollectionUtils.isEmpty(interceptors)) {
+                interceptors = new ArrayList<>();
+            }
+            interceptors.add(new TinkRequestsInterceptor());
+            ret.setInterceptors(interceptors);
+
+        }
+        */
+
+        ret.setUriTemplateHandler(new DefaultUriBuilderFactory(baseUrl));
         return ret;
     }
 

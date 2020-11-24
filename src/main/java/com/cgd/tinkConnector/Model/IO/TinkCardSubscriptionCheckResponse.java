@@ -1,4 +1,6 @@
-package com.cgd.tinkConnector.Model;
+package com.cgd.tinkConnector.Model.IO;
+
+import com.cgd.tinkConnector.Model.TinkCardSubscription;
 
 import java.util.Map;
 

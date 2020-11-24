@@ -1,10 +1,13 @@
-package com.cgd.tinkConnector.Model;
+package com.cgd.tinkConnector.Model.Tink;
+
+import com.cgd.tinkConnector.Model.CGDTransaction;
+import com.cgd.tinkConnector.Utils.ConversionUtils;
 
 import java.util.Map;
 
-public class CGDTransaction {
+public class TinkTransaction {
 
-    private long amount;
+    private float amount;
     private long date;
     private String description;
     private String externalId;
@@ -13,21 +16,30 @@ public class CGDTransaction {
     private String tinkId;
     private String type;
 
+    public TinkTransaction() {
+
+    }
+
+
+    public TinkTransaction(CGDTransaction t) {
+
+        this.amount = ConversionUtils.formatAmmount(t.getAmount());
+        this.date = t.getDate();
+        this.description = t.getDescription();
+        this.externalId = t.getExternalId();
+        this.payload = t.getPayload();
+        this.pending = t.isPending();
+        this.tinkId = t.getTinkId();
+        this.type = t.getType();
+
+    }
 
     public float getAmount() {
         return amount;
     }
 
-    public void setAmount(long amount) {
+    public void setAmount(float amount) {
         this.amount = amount;
-    }
-
-    public long getDate() {
-        return date;
-    }
-
-    public void setDate(long date) {
-        this.date = date;
     }
 
     public String getDescription() {
@@ -76,5 +88,13 @@ public class CGDTransaction {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public long getDate() {
+        return date;
+    }
+
+    public void setDate(long date) {
+        this.date = date;
     }
 }
