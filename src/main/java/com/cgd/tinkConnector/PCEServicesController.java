@@ -7,7 +7,6 @@ import com.cgd.tinkConnector.Model.IO.*;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
 import com.cgd.tinkConnector.entities.TinkUserAccounts;
-import com.cgd.tinkConnector.entities.TinkUserAccountsId;
 import com.cgd.tinkConnector.entities.TinkUsers;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
@@ -23,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.annotation.RequestScope;
 
 import javax.servlet.http.HttpServletRequest;
+import java.security.MessageDigest;
 import java.util.*;
 
 @RestController
@@ -105,18 +105,20 @@ public class PCEServicesController extends BaseController {
             return false;
         } finally {
 
-            Date now = Calendar.getInstance().getTime();
+            try {
 
-            for (TinkAccount ac : accountsToSave) {
+                Date now = Calendar.getInstance().getTime();
+                for (TinkAccount ac : accountsToSave) {
 
-                TinkUserAccounts ua = new TinkUserAccounts();
-                ua.setId(new TinkUserAccountsId(user.getId(), ac.getExternalId()));
-                ua.setAccountNumber(ac.getNumber());
-                ua.setUploadDate(now);
-                this.accountsRepository.save(ua);
-                //accountsToSave.add(ua);
+                    TinkUserAccounts ua = new TinkUserAccounts(ac.getExternalId(), user.getId());
+                    ua.setAccountNumber(ac.getNumber());
+                    ua.setUploadDate(now);
+                    this.accountsRepository.save(ua);
+                    //accountsToSave.add(ua);
+                }
+            } catch (Exception e) {
+                LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
             }
-
 
         }
 
@@ -144,7 +146,7 @@ public class PCEServicesController extends BaseController {
         }
 
         TinkUserCredentialResponse response = tinkClient.getUserCredentials(userAuth.getAccessToken());
-
+        return;
     }
 
     private void processUpload(TransactionsUploadRequest request) {
@@ -159,7 +161,6 @@ public class PCEServicesController extends BaseController {
 
             TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
             OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
-
 
             Optional<TinkUsers> tinkUser = this.usersRepository.findById(request.getTinkId());
 
@@ -177,7 +178,10 @@ public class PCEServicesController extends BaseController {
             List<TinkTransactionAccount> transactions = new ArrayList<>();
 
             String acountType = "CREDIT_CARD";
-            TinkUserAccountsId accountId = new TinkUserAccountsId();
+
+            MessageDigest md = MessageDigest.getInstance("MD5");
+
+
             for (CGDAccount acc : request.getAccounts()) {
 
                 for (CGDTransaction t : acc.getTransactions()) {
@@ -185,9 +189,10 @@ public class PCEServicesController extends BaseController {
                     t.setTinkId(request.getTinkId());
                     // t.setAmount(ConversionUtils.formatAmmount(t.getAmount()));
                 }
-                accountId.setExternalAccountId(acc.getExternalId());
-                accountId.setTinkId(tinkUser.get().getId());
-                Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(accountId);
+
+
+                TinkUserAccounts userAccount = new TinkUserAccounts(acc.getExternalId(), tinkUser.get().getId());
+                Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(userAccount.getUniqueId());
 
                 if (!dbAccount.isPresent()) {
                     tinkAccounts.add(acc.toTinkAccount(acountType));

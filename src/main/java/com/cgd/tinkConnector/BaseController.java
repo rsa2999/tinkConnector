@@ -68,7 +68,7 @@ public class BaseController {
 
         } catch (Exception e) {
 
-            LOGGER.error(String.format("registerServiceCall : subscription %d", request.getSubscriptionId()), e);
+            LOGGER.error(String.format("registerServiceCall : subscription %s", request.getSubscriptionId()), e);
         }
 
     }

@@ -215,6 +215,14 @@ public class TinkClient {
         req.setAutoBook(false);
         req.setOverridePending(false);
         req.setTransactionAccounts(accounts);
+        req.setType("REAL_TIME");
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            String x = mapper.writeValueAsString(req);
+            System.out.println(x);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
 
         HttpEntity<IngestTransactionsRequest> request = new HttpEntity<>(req, headers);
         ResponseEntity<IngestTransactionsResponse> response;

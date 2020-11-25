@@ -114,8 +114,9 @@ public class CGDAccount {
     public TinkTransactionAccount toTransactionAccount() {
 
         TinkTransactionAccount ac = new TinkTransactionAccount();
-        ac.setReservedAmount(this.getReservedAmount());
-        ac.setBalance(this.getBalance());
+        ac.setReservedAmount(ConversionUtils.formatAmmount(this.getReservedAmount()));
+        ac.setBalance(ConversionUtils.formatAmmount(this.getBalance()));
+        ac.setExternalId(this.getExternalId());
         List<TinkTransaction> transactions = new ArrayList<>();
 
         for (CGDTransaction t : this.transactions) {
@@ -127,11 +128,6 @@ public class CGDAccount {
 
     public TinkAccount toTinkAccount(String accountType) {
 
-        /*
-         //  acc.setAvailableCredit(ConversionUtils.formatAmmount(acc.getAvailableCredit()));
-                //  acc.setBalance(ConversionUtils.formatAmmount(acc.getBalance()));
-                // acc.setReservedAmount(ConversionUtils.formatAmmount(acc.getReservedAmount()));
-         */
 
         TinkAccount ac = new TinkAccount();
         ac.setReservedAmount(ConversionUtils.formatAmmount(this.getReservedAmount()));

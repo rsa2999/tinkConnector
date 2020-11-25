@@ -29,7 +29,7 @@ public class TinkTransaction {
         this.externalId = t.getExternalId();
         this.payload = t.getPayload();
         this.pending = t.isPending();
-        this.tinkId = t.getTinkId();
+        //this.tinkId = t.getTinkId();
         this.type = t.getType();
 
     }
@@ -49,6 +49,7 @@ public class TinkTransaction {
     public void setDescription(String description) {
         this.description = description;
     }
+
 
     public String getExternalId() {
         return externalId;
@@ -74,6 +75,7 @@ public class TinkTransaction {
         this.pending = pending;
     }
 
+
     public String getTinkId() {
         return tinkId;
     }
@@ -81,7 +83,7 @@ public class TinkTransaction {
     public void setTinkId(String tinkId) {
         this.tinkId = tinkId;
     }
-
+  
     public String getType() {
         return type;
     }
