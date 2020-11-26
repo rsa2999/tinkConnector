@@ -3,6 +3,8 @@ package com.cgd.tinkConnector;
 
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import net.schmizz.sshj.SSHClient;
+import net.schmizz.sshj.sftp.RemoteResourceInfo;
+import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.xfer.FileSystemFile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.util.List;
 
 
 @Component
@@ -52,6 +55,10 @@ cgd.batchJob.sshPath=batchFile.txt;
         try {
             //ssh.authPublickey(System.getProperty("user.name"));
             ssh.authPassword(this.sshUserName, this.sshPassword);
+            SFTPClient sftpClient = ssh.newSFTPClient();
+
+            List<RemoteResourceInfo> files = sftpClient.ls(this.workingDirectory);
+
             ssh.newSCPFileTransfer().download(this.sshPath, new FileSystemFile(this.workingDirectory));
         } finally {
             ssh.disconnect();
@@ -63,6 +70,6 @@ cgd.batchJob.sshPath=batchFile.txt;
     @Scheduled(cron = "0/10 * * * * *")
     @SchedulerLock(name = "cardsBatchJob")
     public void taskExecution() {
-        
+
     }
 }

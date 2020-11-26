@@ -146,6 +146,9 @@ public class PCEServicesController extends BaseController {
         }
 
         TinkUserCredentialResponse response = tinkClient.getUserCredentials(userAuth.getAccessToken());
+
+        List<TinkUserAccounts> accounts = this.accountsRepository.findByTinkId(request.getTinkId());
+
         return;
     }
 

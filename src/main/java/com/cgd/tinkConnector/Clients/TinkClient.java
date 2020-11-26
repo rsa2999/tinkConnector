@@ -171,9 +171,20 @@ public class TinkClient {
 
     }
 
-    public IngestAccountsResponse ingestAccounts(String accessToken, String externalUserId, List<TinkAccount> accounts) throws HttpClientErrorException {
+    public boolean deleteAccount(String accessToken, String externalUserId, String accountId) throws HttpClientErrorException {
 
-        ObjectMapper mapper = new ObjectMapper();
+        HttpHeaders headers = new HttpHeaders();
+
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<?> request = new HttpEntity<Object>(headers);
+        this.client.exchange(String.format("/connector/users/%s/accounts/%s", externalUserId, accountId), HttpMethod.DELETE, request, String.class);
+
+        return true;
+
+    }
+
+    public IngestAccountsResponse ingestAccounts(String accessToken, String externalUserId, List<TinkAccount> accounts) throws HttpClientErrorException {
 
 
         HttpHeaders headers = new HttpHeaders();
@@ -183,12 +194,18 @@ public class TinkClient {
         IngestAccountsRequest req = new IngestAccountsRequest();
 
         req.setAccounts(accounts);
+        /*
+        ObjectMapper mapper = new ObjectMapper();
+
+
         try {
             String x = mapper.writeValueAsString(req);
             System.out.println(x);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
+        */
+
         HttpEntity<IngestAccountsRequest> request = new HttpEntity<>(req, headers);
         ResponseEntity<IngestAccountsResponse> response;
 
