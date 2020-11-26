@@ -126,11 +126,12 @@ public class PCEServicesController extends BaseController {
     }
 
 
-    private void processUnsubscribe(TinkUnsubscribeRequest request) {
+    private TinkUnsubscribeResponse processUnsubscribe(TinkUnsubscribeRequest request) {
 
         TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
         OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
 
+        TinkUnsubscribeResponse ret = new TinkUnsubscribeResponse();
 
         Optional<TinkUsers> tinkUser = this.usersRepository.findById(request.getTinkId());
 
@@ -140,7 +141,6 @@ public class PCEServicesController extends BaseController {
 
         if (!tinkUser.isPresent()) {
 
-
             tinkUser = Optional.of(tinkClient.getUser(userAuth.getAccessToken()));
             this.usersRepository.save(tinkUser.get());
         }
@@ -149,7 +149,23 @@ public class PCEServicesController extends BaseController {
 
         List<TinkUserAccounts> accounts = this.accountsRepository.findByTinkId(request.getTinkId());
 
-        return;
+        if (accounts == null) return ret;
+
+        int accountsInError = 0;
+        for (TinkUserAccounts acc : accounts) {
+
+            try {
+
+                tinkClient.deleteAccount(svcToken.getAccessToken(), tinkUser.get().getExternalUserId(), acc.getExternalId());
+
+            } catch (Exception e) {
+                accountsInError++;
+
+            }
+        }
+
+        ret.setSucess(accountsInError == 0);
+        return ret;
     }
 
     private void processUpload(TransactionsUploadRequest request) {
