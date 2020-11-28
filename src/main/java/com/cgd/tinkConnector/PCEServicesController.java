@@ -6,6 +6,7 @@ import com.cgd.tinkConnector.Model.CGDTransaction;
 import com.cgd.tinkConnector.Model.IO.*;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
+import com.cgd.tinkConnector.entities.TinkUserAccountId;
 import com.cgd.tinkConnector.entities.TinkUserAccounts;
 import com.cgd.tinkConnector.entities.TinkUsers;
 import io.swagger.annotations.ApiOperation;
@@ -147,7 +148,7 @@ public class PCEServicesController extends BaseController {
 
         TinkUserCredentialResponse response = tinkClient.getUserCredentials(userAuth.getAccessToken());
 
-        List<TinkUserAccounts> accounts = this.accountsRepository.findByTinkId(request.getTinkId());
+        List<TinkUserAccounts> accounts = this.accountsRepository.findByIdTinkId(request.getTinkId());
 
         if (accounts == null) return ret;
 
@@ -156,7 +157,7 @@ public class PCEServicesController extends BaseController {
 
             try {
 
-                tinkClient.deleteAccount(svcToken.getAccessToken(), tinkUser.get().getExternalUserId(), acc.getExternalId());
+                tinkClient.deleteAccount(svcToken.getAccessToken(), tinkUser.get().getExternalUserId(), acc.getId().getExternalId());
 
             } catch (Exception e) {
                 accountsInError++;
@@ -209,9 +210,8 @@ public class PCEServicesController extends BaseController {
                     // t.setAmount(ConversionUtils.formatAmmount(t.getAmount()));
                 }
 
-
-                TinkUserAccounts userAccount = new TinkUserAccounts(acc.getExternalId(), tinkUser.get().getId());
-                Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(userAccount.getUniqueId());
+                TinkUserAccountId userAccount = new TinkUserAccountId(acc.getExternalId(), tinkUser.get().getId());
+                Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(userAccount);
 
                 if (!dbAccount.isPresent()) {
                     tinkAccounts.add(acc.toTinkAccount(acountType));

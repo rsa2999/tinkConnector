@@ -1,6 +1,7 @@
 package com.cgd.tinkConnector;
 
 
+import com.cgd.tinkConnector.Model.CGDAccount;
 import com.cgd.tinkConnector.Model.IO.TinkUnsubscribeRequest;
 import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,6 +21,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.List;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -74,6 +76,20 @@ public class UserOperationsTests {
 
         //req.setTinkId("b21080bed7364bce9f2f4ae20c8a38b1");
         req.setTinkId("aa8c025e1e9947ecb48991d9b22bd479");
+
+        List<CGDAccount> accounts = new ArrayList<>();
+
+        CGDAccount ac = new CGDAccount();
+        ac.setExternalId("1");
+        ac.setName("teste");
+        ac.setNumber("1");
+        accounts.add(ac);
+
+        ac = new CGDAccount();
+        ac.setExternalId("2");
+        ac.setName("teste");
+        ac.setNumber("2");
+        accounts.add(ac);
 
         final String baseUrl = BASE_URL + "/uploadTransactions";
         URI uri = new URI(baseUrl);

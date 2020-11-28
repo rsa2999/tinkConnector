@@ -1,22 +1,17 @@
 package com.cgd.tinkConnector.entities;
 
+import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
-import javax.persistence.Id;
 import javax.persistence.Table;
-import javax.xml.bind.DatatypeConverter;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 
 @Entity
 @Table(name = "tinkusersaccounts")
 public class TinkUserAccounts {
 
-    @Id
-    private String uniqueId;
+    @EmbeddedId
+    private TinkUserAccountId id;
 
-    private String externalId;
-    private String tinkId;
     private String accountNumber;
     private Date uploadDate;
 
@@ -25,42 +20,24 @@ public class TinkUserAccounts {
 
     }
 
-    public TinkUserAccounts(String externalId, String tinkId) throws NoSuchAlgorithmException {
+    public TinkUserAccounts(String externalId, String tinkId) {
 
-        this.externalId = externalId;
-        this.tinkId = tinkId;
-
-        MessageDigest md = MessageDigest.getInstance("MD5");
-        md.update((externalId + tinkId).getBytes());
-        byte[] digest = md.digest();
-        this.uniqueId = DatatypeConverter.printHexBinary(digest).toLowerCase();
-    }
-
-    public String getExternalId() {
-        return externalId;
-    }
-
-    public void setExternalId(String externalId) {
-        this.externalId = externalId;
-    }
-
-    public String getTinkId() {
-        return tinkId;
-    }
-
-    public void setTinkId(String tinkId) {
-        this.tinkId = tinkId;
+        this.id = new TinkUserAccountId(externalId, tinkId);
+        
     }
 
 
-    public String getUniqueId() {
-        return uniqueId;
+    public TinkUserAccountId getId() {
+        return id;
     }
 
-    public void setUniqueId(String uniqueId) {
-        this.uniqueId = uniqueId;
+    public void setId(TinkUserAccountId id) {
+        this.id = id;
     }
 
+    public TinkUserAccounts(TinkUserAccountId id) {
+        this.id = id;
+    }
 
     public String getAccountNumber() {
         return accountNumber;
