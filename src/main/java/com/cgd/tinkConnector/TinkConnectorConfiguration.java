@@ -83,6 +83,8 @@ public class TinkConnectorConfiguration {
 
     @Value("${tink.proxy.SOCKS.port:0}")
     private int tinkProxySOCKSPort;
+    @Value("${cgd.invertTransactionsSignal:true}")
+    public static boolean invertTransactionsSignal = true;
 
     @Bean
     @Scope(value = WebApplicationContext.SCOPE_REQUEST)

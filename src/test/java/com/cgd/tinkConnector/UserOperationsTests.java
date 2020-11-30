@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -55,6 +56,22 @@ public class UserOperationsTests {
 
         //Verify request succeed
         Assert.assertEquals(201, result.getStatusCodeValue());
+
+    }
+
+    @Test
+    public void testJob() throws URISyntaxException, JsonProcessingException {
+
+
+        final String baseUrl = BASE_URL + "/forcejob";
+        URI uri = new URI(baseUrl);
+
+        HttpHeaders headers = new HttpHeaders();
+        //headers.set("Authorization", authorizationHeader);
+
+
+        HttpEntity<?> request = new HttpEntity<Object>(headers);
+        ResponseEntity<String> result = this.restTemplate.exchange(baseUrl, HttpMethod.GET, request, String.class);
 
     }
 

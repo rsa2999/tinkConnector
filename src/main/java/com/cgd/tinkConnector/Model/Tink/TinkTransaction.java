@@ -21,12 +21,12 @@ public class TinkTransaction {
     }
 
 
-    public TinkTransaction(CGDTransaction t) {
+    public TinkTransaction(Long numClient, String accountNumber, CGDTransaction t) {
 
         this.amount = ConversionUtils.formatAmmount(t.getAmount());
         this.date = t.getDate();
         this.description = t.getDescription();
-        this.externalId = t.getExternalId();
+        this.externalId = ConversionUtils.generateTransactionExternalId(numClient, accountNumber, this.amount, this.description, this.date);
         this.payload = t.getPayload();
         this.pending = t.isPending();
         //this.tinkId = t.getTinkId();
@@ -83,7 +83,7 @@ public class TinkTransaction {
     public void setTinkId(String tinkId) {
         this.tinkId = tinkId;
     }
-  
+
     public String getType() {
         return type;
     }

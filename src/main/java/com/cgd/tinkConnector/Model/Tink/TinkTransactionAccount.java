@@ -1,5 +1,7 @@
 package com.cgd.tinkConnector.Model.Tink;
 
+import com.cgd.tinkConnector.Utils.ConversionUtils;
+
 import java.util.List;
 
 public class TinkTransactionAccount {
@@ -9,19 +11,28 @@ public class TinkTransactionAccount {
     private float reservedAmount;
     private String externalId;
     private List<String> payload;
-
     private List<TinkTransaction> transactions;
+
+    public TinkTransactionAccount() {
+
+    }
+
+    public TinkTransactionAccount(Long numClient, String accountNumber) {
+
+        this.externalId = ConversionUtils.generateAccountExternalId(numClient, accountNumber);
+
+    }
 
     public float getBalance() {
         return balance;
     }
 
-    public void setBalance(float balance) {
-        this.balance = balance;
-    }
-
     public float getReservedAmount() {
         return reservedAmount;
+    }
+
+    public void setBalance(float balance) {
+        this.balance = balance;
     }
 
     public void setReservedAmount(float reservedAmount) {

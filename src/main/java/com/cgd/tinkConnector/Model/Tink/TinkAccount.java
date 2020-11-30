@@ -1,5 +1,7 @@
 package com.cgd.tinkConnector.Model.Tink;
 
+import com.cgd.tinkConnector.Utils.ConversionUtils;
+
 public class TinkAccount {
 
     private float availableCredit;
@@ -12,6 +14,11 @@ public class TinkAccount {
     private String name;
     private String number;
     private String type;
+
+    public TinkAccount(Long numClient, String accountNumber) {
+
+        this.externalId = ConversionUtils.generateAccountExternalId(numClient, accountNumber);
+    }
 
     public String getType() {
         return type;

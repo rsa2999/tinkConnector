@@ -2,11 +2,9 @@ package com.cgd.tinkConnector;
 
 import com.cgd.tinkConnector.Clients.*;
 import com.cgd.tinkConnector.Model.CGDAccount;
-import com.cgd.tinkConnector.Model.CGDTransaction;
 import com.cgd.tinkConnector.Model.IO.*;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
-import com.cgd.tinkConnector.entities.TinkUserAccountId;
 import com.cgd.tinkConnector.entities.TinkUserAccounts;
 import com.cgd.tinkConnector.entities.TinkUsers;
 import io.swagger.annotations.ApiOperation;
@@ -24,7 +22,9 @@ import org.springframework.web.context.annotation.RequestScope;
 
 import javax.servlet.http.HttpServletRequest;
 import java.security.MessageDigest;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestScope
@@ -65,68 +65,6 @@ public class PCEServicesController extends BaseController {
     }
 
 
-    private boolean uploadAccountsToTink(TinkClient tinkClient, String accessToken, TransactionsUploadRequest request, TinkUsers user, List<TinkAccount> tinkAccounts) {
-
-        if (tinkAccounts.size() == 0) return true;
-
-
-        List<TinkAccount> accountsToSave = new ArrayList<>();
-        try {
-
-            tinkClient.ingestAccounts(accessToken, user.getExternalUserId(), tinkAccounts);
-            accountsToSave.addAll(tinkAccounts);
-
-            registerServiceCall(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), tinkAccounts);
-            return true;
-        } catch (HttpClientErrorException e) {
-
-            LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
-            if (e.getStatusCode().value() == 409) {
-                // uma das contas ja existe ,going account by account mode
-
-                List<TinkAccount> testAccount = new ArrayList<>();
-                for (TinkAccount a : tinkAccounts) {
-
-                    testAccount.clear();
-                    testAccount.add(a);
-                    try {
-                        tinkClient.ingestAccounts(accessToken, user.getExternalUserId(), testAccount);
-
-                    } catch (HttpClientErrorException e1) {
-                        if (e.getStatusCode().value() == 409) {
-
-                            accountsToSave.add(a);
-                        }
-
-                    }
-
-                }
-                return true;
-            }
-            return false;
-        } finally {
-
-            try {
-
-                Date now = Calendar.getInstance().getTime();
-                for (TinkAccount ac : accountsToSave) {
-
-                    TinkUserAccounts ua = new TinkUserAccounts(ac.getExternalId(), user.getId());
-                    ua.setAccountNumber(ac.getNumber());
-                    ua.setUploadDate(now);
-                    this.accountsRepository.save(ua);
-                    //accountsToSave.add(ua);
-                }
-            } catch (Exception e) {
-                LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
-            }
-
-        }
-
-
-    }
-
-
     private TinkUnsubscribeResponse processUnsubscribe(TinkUnsubscribeRequest request) {
 
         TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
@@ -148,7 +86,7 @@ public class PCEServicesController extends BaseController {
 
         TinkUserCredentialResponse response = tinkClient.getUserCredentials(userAuth.getAccessToken());
 
-        List<TinkUserAccounts> accounts = this.accountsRepository.findByIdTinkId(request.getTinkId());
+        List<TinkUserAccounts> accounts = this.accountsRepository.findByTinkId(request.getTinkId());
 
         if (accounts == null) return ret;
 
@@ -157,7 +95,7 @@ public class PCEServicesController extends BaseController {
 
             try {
 
-                tinkClient.deleteAccount(svcToken.getAccessToken(), tinkUser.get().getExternalUserId(), acc.getId().getExternalId());
+                tinkClient.deleteAccount(svcToken.getAccessToken(), tinkUser.get().getExternalUserId(), acc.getExternalAccountId());
 
             } catch (Exception e) {
                 accountsInError++;
@@ -172,6 +110,8 @@ public class PCEServicesController extends BaseController {
     private void processUpload(TransactionsUploadRequest request) {
 
         // ObjectMapper mapper = new ObjectMapper();
+
+        // request.setTinkId("aa8c025e1e9947ecb48991d9b22bd479");
 
 
         boolean hasErrors = false;
@@ -194,9 +134,7 @@ public class PCEServicesController extends BaseController {
             }
 
             List<TinkAccount> tinkAccounts = new ArrayList<>();
-
             List<TinkTransactionAccount> transactions = new ArrayList<>();
-
             String acountType = "CREDIT_CARD";
 
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -204,20 +142,26 @@ public class PCEServicesController extends BaseController {
 
             for (CGDAccount acc : request.getAccounts()) {
 
+                /*
                 for (CGDTransaction t : acc.getTransactions()) {
 
                     t.setTinkId(request.getTinkId());
                     // t.setAmount(ConversionUtils.formatAmmount(t.getAmount()));
                 }
+*/
 
-                TinkUserAccountId userAccount = new TinkUserAccountId(acc.getExternalId(), tinkUser.get().getId());
-                Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(userAccount);
+                TinkUserAccounts userAccount = new TinkUserAccounts(request.getNumClient(), acc.getNumber(), tinkUser.get().getId());
+                Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(userAccount.getId());
 
                 if (!dbAccount.isPresent()) {
-                    tinkAccounts.add(acc.toTinkAccount(acountType));
+                    tinkAccounts.add(acc.toTinkAccount(acountType, request.getNumClient()));
                 }
 
-                transactions.add(acc.toTransactionAccount());
+                if (acc.getTransactions() != null && acc.getTransactions().size() > 0) {
+
+                    transactions.add(acc.toTransactionAccount(request.getNumClient()));
+                }
+
 
             }
 

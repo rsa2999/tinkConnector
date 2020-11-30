@@ -22,6 +22,16 @@ public class CGDAccount {
     private String plasticNumber;
     private List<CGDTransaction> transactions;
 
+    public CGDAccount(Long numClient, String accountNumber) {
+
+        this.externalId = ConversionUtils.generateAccountExternalId(numClient, accountNumber);
+    }
+
+    public CGDAccount() {
+
+
+    }
+
     public long getAvailableCredit() {
         return availableCredit;
     }
@@ -111,34 +121,32 @@ public class CGDAccount {
     }
 
 
-    public TinkTransactionAccount toTransactionAccount() {
+    public TinkTransactionAccount toTransactionAccount(Long clientNumber) {
 
         TinkTransactionAccount ac = new TinkTransactionAccount();
         ac.setReservedAmount(ConversionUtils.formatAmmount(this.getReservedAmount()));
         ac.setBalance(ConversionUtils.formatAmmount(this.getBalance()));
-        ac.setExternalId(this.getExternalId());
+        ac.setExternalId(ConversionUtils.generateAccountExternalId(clientNumber, this.getNumber()));
         List<TinkTransaction> transactions = new ArrayList<>();
 
         for (CGDTransaction t : this.transactions) {
-            transactions.add(new TinkTransaction(t));
+            transactions.add(new TinkTransaction(clientNumber, this.getNumber(), t));
         }
         ac.setTransactions(transactions);
         return ac;
     }
 
-    public TinkAccount toTinkAccount(String accountType) {
+    public TinkAccount toTinkAccount(String accountType, Long numClient) {
 
 
-        TinkAccount ac = new TinkAccount();
+        TinkAccount ac = new TinkAccount(numClient, this.getNumber());
         ac.setReservedAmount(ConversionUtils.formatAmmount(this.getReservedAmount()));
         ac.setBalance(ConversionUtils.formatAmmount(this.getBalance()));
         ac.setAvailableCredit(ConversionUtils.formatAmmount(this.getAvailableCredit()));
         ac.setClosed(this.isClosed());
-        ac.setExternalId(this.getExternalId());
-        //   ac.setExclusion(this.getExclusion());
-        //   ac.setFlags(this.getFlags());
+        // ac.setExternalId(ConversionUtils.generateAccountExternalId(numClient, this.getNumber()));
         ac.setName(this.getName());
-        ac.setNumber(this.getPlasticNumber());
+        ac.setNumber(ConversionUtils.maskAccountNumber(this.getPlasticNumber()));
         ac.setType(accountType);
         return ac;
     }

@@ -1,7 +1,9 @@
 package com.cgd.tinkConnector.entities;
 
-import javax.persistence.EmbeddedId;
+import com.cgd.tinkConnector.Utils.ConversionUtils;
+
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.Table;
 import java.util.Date;
 
@@ -9,34 +11,65 @@ import java.util.Date;
 @Table(name = "tinkusersaccounts")
 public class TinkUserAccounts {
 
-    @EmbeddedId
-    private TinkUserAccountId id;
+    @Id
+    private String id;
+    private String externalAccountId;
+    private String tinkId;
 
     private String accountNumber;
+    private String accountDescription;
     private Date uploadDate;
+
+    public String getAccountDescription() {
+        return accountDescription;
+    }
+
+    public void setAccountDescription(String accountDescription) {
+        this.accountDescription = accountDescription;
+    }
 
     public TinkUserAccounts() {
 
 
     }
 
-    public TinkUserAccounts(String externalId, String tinkId) {
+    public TinkUserAccounts(Long numClient, String accountNumber, String tinkId) {
 
-        this.id = new TinkUserAccountId(externalId, tinkId);
-        
+        this.externalAccountId = ConversionUtils.generateAccountExternalId(numClient, accountNumber);
+        this.tinkId = tinkId;
+        this.id = ConversionUtils.generateInternalAccountId(this.externalAccountId, this.tinkId);
     }
 
+    public TinkUserAccounts(String externalId, String tinkId) {
 
-    public TinkUserAccountId getId() {
+        this.externalAccountId = externalId;
+        this.tinkId = tinkId;
+        this.id = ConversionUtils.generateInternalAccountId(this.externalAccountId, this.tinkId);
+
+    }
+
+    public String getId() {
         return id;
     }
 
-    public void setId(TinkUserAccountId id) {
+    public void setId(String id) {
         this.id = id;
     }
 
-    public TinkUserAccounts(TinkUserAccountId id) {
-        this.id = id;
+    public String getExternalAccountId() {
+        return externalAccountId;
+    }
+
+    public void setExternalAccountId(String externalAccountId) {
+        this.externalAccountId = externalAccountId;
+    }
+
+    public String getTinkId() {
+        return tinkId;
+    }
+
+    public void setTinkId(String tinkId) {
+        this.tinkId = tinkId;
     }
 
     public String getAccountNumber() {

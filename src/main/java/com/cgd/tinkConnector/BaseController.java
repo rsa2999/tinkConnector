@@ -1,17 +1,28 @@
 package com.cgd.tinkConnector;
 
+import com.cgd.tinkConnector.Clients.TinkClient;
+import com.cgd.tinkConnector.Clients.TinkServices;
 import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
+import com.cgd.tinkConnector.Model.Tink.TinkAccount;
+import com.cgd.tinkConnector.Repositories.BatchFilesRepository;
 import com.cgd.tinkConnector.Repositories.TinkUserAccountsRepository;
 import com.cgd.tinkConnector.Repositories.TinkUsersRepository;
 import com.cgd.tinkConnector.Repositories.UploadRequestsRepository;
 import com.cgd.tinkConnector.entities.PCEUploadRequest;
+import com.cgd.tinkConnector.entities.TinkUserAccounts;
+import com.cgd.tinkConnector.entities.TinkUsers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 
 
 public class BaseController {
@@ -24,6 +35,9 @@ public class BaseController {
     protected String clientId;
     protected String clientSecret;
 
+    @Value("${cgd.invertTransactionsSignal:true}")
+    private static boolean inverTransactionsSignal;
+
     @Autowired
     protected UploadRequestsRepository requestsRepository;
 
@@ -32,6 +46,11 @@ public class BaseController {
 
     @Autowired
     protected TinkUserAccountsRepository accountsRepository;
+
+
+    @Autowired
+    protected BatchFilesRepository batchFilesRepository;
+
 
     protected void registerServiceCall(TransactionsUploadRequest request, int serviceId, Object payload) {
 
@@ -45,7 +64,72 @@ public class BaseController {
 
     }
 
-    private void registerServiceCall(TransactionsUploadRequest request, int serviceId, int errorCode, Object payload, Exception error) {
+
+    protected boolean uploadAccountsToTink(TinkClient tinkClient, String accessToken, TransactionsUploadRequest request, TinkUsers user, List<TinkAccount> tinkAccounts) {
+
+        if (tinkAccounts.size() == 0) return true;
+
+
+        List<TinkAccount> accountsToSave = new ArrayList<>();
+        try {
+
+            tinkClient.ingestAccounts(accessToken, user.getExternalUserId(), tinkAccounts);
+            accountsToSave.addAll(tinkAccounts);
+
+            registerServiceCall(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), tinkAccounts);
+            return true;
+        } catch (HttpClientErrorException e) {
+
+            LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
+            if (e.getStatusCode().value() == 409) {
+                // uma das contas ja existe ,going account by account mode
+
+                List<TinkAccount> testAccount = new ArrayList<>();
+                for (TinkAccount a : tinkAccounts) {
+
+                    testAccount.clear();
+                    testAccount.add(a);
+                    try {
+                        tinkClient.ingestAccounts(accessToken, user.getExternalUserId(), testAccount);
+
+                    } catch (HttpClientErrorException e1) {
+                        if (e.getStatusCode().value() == 409) {
+
+                            accountsToSave.add(a);
+                        }
+
+                    }
+
+                }
+                return true;
+            }
+            return false;
+        } finally {
+
+            try {
+
+                Date now = Calendar.getInstance().getTime();
+                for (TinkAccount ac : accountsToSave) {
+
+                    TinkUserAccounts ua = new TinkUserAccounts(ac.getExternalId(), user.getId());
+                    ua.setAccountNumber(ac.getNumber());
+                    ua.setAccountDescription(ac.getName());
+                    ua.setUploadDate(now);
+                    this.accountsRepository.save(ua);
+
+                }
+                this.accountsRepository.flush();
+            } catch (Exception e) {
+                LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
+            }
+
+        }
+
+
+    }
+
+
+    protected void registerServiceCall(TransactionsUploadRequest request, int serviceId, int errorCode, Object payload, Exception error) {
 
 
         try {
