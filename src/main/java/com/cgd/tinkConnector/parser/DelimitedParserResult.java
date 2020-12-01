@@ -1,7 +1,9 @@
 package com.cgd.tinkConnector.parser;
 
+import com.cgd.tinkConnector.TinkConnectorConfiguration;
 import com.cgd.tinkConnector.Utils.ConversionUtils;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,9 +41,13 @@ public class DelimitedParserResult {
         int sign = -1;
         if (raw.substring(0, 1).equals("+")) sign = 1;
 
-        float val = Float.parseFloat(raw.substring(1, raw.length() - 1));
+        BigDecimal dec = new BigDecimal(raw.replace(",", ".").substring(1));
 
-        return val * sign;
+        float val = dec.floatValue() * sign;
+
+        if (TinkConnectorConfiguration.invertTransactionsSignal) return val * -1;
+
+        return val;
     }
 
 

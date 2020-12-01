@@ -1,6 +1,9 @@
 package com.cgd.tinkConnector.Model.Tink;
 
 import com.cgd.tinkConnector.Utils.ConversionUtils;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.util.List;
 
 public class TinkAccount {
 
@@ -14,6 +17,29 @@ public class TinkAccount {
     private String name;
     private String number;
     private String type;
+
+    @JsonIgnore
+    private List<TinkTransaction> transactions;
+
+
+    public TinkTransactionAccount toTransactionAccount() {
+
+        TinkTransactionAccount ac = new TinkTransactionAccount();
+        ac.setReservedAmount(this.getReservedAmount());
+        ac.setBalance(this.getBalance());
+        ac.setExternalId(this.getExternalId());
+        ac.setTransactions(this.getTransactions());
+        return ac;
+    }
+
+
+    public List<TinkTransaction> getTransactions() {
+        return transactions;
+    }
+
+    public void setTransactions(List<TinkTransaction> transactions) {
+        this.transactions = transactions;
+    }
 
     public TinkAccount(Long numClient, String accountNumber) {
 

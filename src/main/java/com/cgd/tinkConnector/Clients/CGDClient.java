@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CGDClient {
@@ -35,12 +36,15 @@ public class CGDClient {
         return headers;
     }
 
-    public TinkCardSubscriptionCheckResponse checkTinkCardSubscriptions() {
+    public TinkCardSubscriptionCheckResponse checkTinkCardSubscriptions(Long numClient, int subscriptionType) {
 
         HttpHeaders headers = this.getHeaders();
 
 
         TinkCardSubscriptionCheckRequest req = new TinkCardSubscriptionCheckRequest();
+        req.setClientNumbers(new ArrayList<>());
+        req.getClientNumbers().add(numClient);
+        req.setSubscriptionType(subscriptionType);
 
         HttpEntity<TinkCardSubscriptionCheckRequest> request = new HttpEntity<>(req, headers);
         ResponseEntity<TinkCardSubscriptionCheckResponse> response;

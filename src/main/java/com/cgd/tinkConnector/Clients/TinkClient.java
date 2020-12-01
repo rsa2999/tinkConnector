@@ -223,6 +223,7 @@ public class TinkClient {
 
     public IngestTransactionsResponse ingestTransactions(String accessToken, TinkUsers user, List<TinkTransactionAccount> accounts) throws HttpClientErrorException {
 
+        
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
         headers.setBearerAuth(accessToken);

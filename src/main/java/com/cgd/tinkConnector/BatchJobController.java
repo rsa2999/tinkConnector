@@ -1,10 +1,21 @@
 package com.cgd.tinkConnector;
 
 
+import com.cgd.tinkConnector.Clients.CGDClient;
+import com.cgd.tinkConnector.Clients.OAuthToken;
+import com.cgd.tinkConnector.Clients.TinkClient;
+import com.cgd.tinkConnector.Clients.TinkServices;
+import com.cgd.tinkConnector.Model.IO.TinkCardSubscriptionCheckResponse;
+import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransaction;
+import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
+import com.cgd.tinkConnector.Model.TinkCardSubscription;
+import com.cgd.tinkConnector.Repositories.BatchFilesRepository;
 import com.cgd.tinkConnector.Utils.ConversionUtils;
 import com.cgd.tinkConnector.entities.BatchFile;
+import com.cgd.tinkConnector.entities.TinkUserAccounts;
+import com.cgd.tinkConnector.entities.TinkUsers;
 import com.cgd.tinkConnector.parser.DelimitedParserInfo;
 import com.cgd.tinkConnector.parser.DelimitedParserResult;
 import io.swagger.annotations.ApiOperation;
@@ -15,12 +26,14 @@ import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.annotation.RequestScope;
 
@@ -29,10 +42,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.Semaphore;
 
 
@@ -76,11 +86,15 @@ public class BatchJobController extends BaseController {
     @Value("${cgd.batchJob.workingDirectory:null}")
     private String workingDirectory;
 
+    @Autowired
+    protected BatchFilesRepository batchFilesRepository;
+
     private DelimitedParserInfo parserInfoTransaction;
     private DelimitedParserInfo parserInfoBalances;
 
 
     private Semaphore semaphore = new Semaphore(1);
+    private Map<Long, String> clientSubscriptions = new HashMap<>();
 
     public BatchJobController(RestTemplate cgdRestTemplateBatch, RestTemplate tinkRestTemplateBatch, String clientId, String clientSecret) {
 
@@ -88,6 +102,8 @@ public class BatchJobController extends BaseController {
         this.tinkSvc = tinkRestTemplateBatch;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+
+        this.initParser();
 
 
     }
@@ -124,18 +140,24 @@ public class BatchJobController extends BaseController {
         parserInfoBalances.addField(ZD4270CLINUM, 10);
         parserInfoBalances.addField(ZD4270ACCD, 23);
         parserInfoBalances.addField(ZD4270TIPOREGISTO, 2);
-        parserInfoBalances.addField(ZD4270AVAILBAL, 17);
-        parserInfoBalances.addField(ZD4270CURBALAM, 17);
+        parserInfoBalances.addField(ZD4270AVAILBAL, 15);
+        parserInfoBalances.addField(ZD4270CURBALAM, 15);
 
     }
 
-    private TinkAccount getTinkTransactionAccountByUser(Map<Long, Map<String, TinkAccount>> accountsByUser, Long numClient, String accountNumber, String plasticNumber) {
+    private TinkAccount getTinkTransactionAccountByUser(Map<String, Map<String, TinkAccount>> accountsByUser, Long numClient, String accountNumber, String plasticNumber) {
+
+        String tinkId = getTinkIdForClientNumber(numClient);
+
+        if (tinkId == null) return null;
+
 
         Map<String, TinkAccount> accountsOfUser = null;
-        if (!accountsByUser.containsKey(numClient)) {
+        if (!accountsByUser.containsKey(tinkId)) {
 
             accountsOfUser = new HashMap<>();
-        } else accountsOfUser = accountsByUser.get(numClient);
+            accountsByUser.put(tinkId, accountsOfUser);
+        } else accountsOfUser = accountsByUser.get(tinkId);
 
         TinkAccount account = null;
         if (!accountsOfUser.containsKey(accountNumber)) {
@@ -147,53 +169,190 @@ public class BatchJobController extends BaseController {
             accountsOfUser.put(accountNumber, account);
         } else account = accountsOfUser.get(accountNumber);
 
-        if (plasticNumber.length() > 0) {
+        if (plasticNumber != null && plasticNumber.length() > 0) {
             account.setNumber(ConversionUtils.maskAccountNumber(plasticNumber));
         }
 
         return account;
     }
 
-    private void processTransactionLine(Map<Long, Map<String, TinkAccount>> accountsByUser, DelimitedParserResult rawTransac) {
+    private boolean processBalanceLine(Map<String, Map<String, TinkAccount>> accountsByUser, DelimitedParserResult rawTransac) {
+
+        Long numClient = rawTransac.getParameterAsLong(ZD4270CLINUM);
+        String accountNumber = rawTransac.getParameterAsString(ZD4270ACCD);
+        TinkAccount account = getTinkTransactionAccountByUser(accountsByUser, numClient, accountNumber, null);
+
+        if (account == null) return false;
+
+        float availableBalance = rawTransac.getParameterAsAmount(ZD4270AVAILBAL);
+        float currentBalance = rawTransac.getParameterAsAmount(ZD4270CURBALAM);
+
+        account.setBalance(currentBalance);
+        account.setAvailableCredit(availableBalance);
+
+        return true;
+
+    }
+
+    private boolean processTransactionLine(Map<String, Map<String, TinkAccount>> accountsByUser, DelimitedParserResult rawTransac) {
 
         Long numClient = rawTransac.getParameterAsLong(ZD4270CLINUM);
         String accountNumber = rawTransac.getParameterAsString(ZD4270ACCD);
         String plasticNumber = rawTransac.getParameterAsString(ZD4270PLID);
         TinkAccount account = getTinkTransactionAccountByUser(accountsByUser, numClient, accountNumber, plasticNumber);
-/*
+
+        if (account == null) {
+            //user nao subscripto
+            return false;
+
+        }
+
         if (account.getTransactions() == null) {
 
             account.setTransactions(new ArrayList<>());
         }
-*/
+
         TinkTransaction trans = new TinkTransaction();
 
         trans.setAmount(rawTransac.getParameterAsAmount(ZD4270TXNAMT));
         trans.setDate(rawTransac.getParameterAsDate(ZD4270TXNDATE).getTime());
         trans.setDescription(rawTransac.getParameterAsString(ZD4270TXNDESCTX));
+
+        if (trans.getDescription().length() == 0) {
+            return false;
+        }
+
         trans.setPending(false);
+        trans.setExternalId(ConversionUtils.generateTransactionExternalId(numClient, accountNumber, trans.getAmount(), trans.getDescription(), trans.getDate()));
+        trans.setType("CREDIT_CARD");
+        account.getTransactions().add(trans);
 
-        //      account.getTransactions().add(trans);
+        return true;
 
 
-        /*
-          private float amount;
-    private long date;
-    private String description;
-    private String externalId;
-    private Map<String, String> payload;
-    private boolean pending;
-    private String tinkId;
-    private String type;
-         */
+    }
 
+    private String getTinkIdForClientNumber(Long numClient) {
+
+        numClient = new Long(157103482);
+
+        if (this.clientSubscriptions.containsKey(numClient)) {
+
+            String tinkId = this.clientSubscriptions.get(numClient);
+            if (tinkId.length() == 0) return null;
+            return tinkId;
+        }
+
+
+        CGDClient cgdClient = new CGDClient(this.cgdSvc);
+
+        TinkCardSubscriptionCheckResponse response = cgdClient.checkTinkCardSubscriptions(numClient, 1);
+
+        if (response.getSubscriptions() == null || response.getSubscriptions().size() == 0) {
+
+            this.clientSubscriptions.put(numClient, "");
+            return null;
+        } else {
+
+            if (!response.getSubscriptions().containsKey(numClient)) {
+                this.clientSubscriptions.put(numClient, "");
+                return null;
+            } else {
+
+                TinkCardSubscription sub = response.getSubscriptions().get(numClient);
+                this.clientSubscriptions.put(numClient, sub.getTinkId());
+                return sub.getTinkId();
+            }
+        }
+
+    }
+
+
+    private boolean uploadToTink(Map<String, Map<String, TinkAccount>> accountsByUser) {
+
+
+        try {
+
+            TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
+            OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
+
+
+            TransactionsUploadRequest request = new TransactionsUploadRequest();
+            for (String tinkId : accountsByUser.keySet()) {
+
+                Map<String, TinkAccount> accountsOfUser = accountsByUser.get(tinkId);
+                request.setTinkId(tinkId);
+
+                TinkUsers tinkUser = this.getTinkUserByTinkId(tinkClient, svcToken.getAccessToken(), tinkId);
+
+                List<TinkAccount> accountsToUpload = new ArrayList<>();
+                List<TinkTransactionAccount> transactions = new ArrayList<>();
+
+                for (TinkAccount account : accountsOfUser.values()) {
+
+                    if (account.getNumber() == null) {
+                        continue;
+                    }
+                    if (account.getName() == null) {
+                        TinkUserAccounts userAccount = new TinkUserAccounts(account.getExternalId(), tinkId);
+                        Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(userAccount.getId());
+
+                        if (dbAccount.isPresent()) {
+                            account.setName(dbAccount.get().getAccountDescription());
+                        } else account.setName("Cartão de Crédito");
+
+                    }
+                    TinkUserAccounts checkAccount = new TinkUserAccounts(account.getExternalId(), tinkUser.getId());
+                    Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(checkAccount.getId());
+                    if (!dbAccount.isPresent()) {
+
+                        accountsToUpload.add(account);
+                    }
+                    if (account.getTransactions() != null && account.getTransactions().size() > 0) {
+                        transactions.add(account.toTransactionAccount());
+                    }
+
+
+                }
+                this.uploadAccountsToTink(tinkClient, svcToken.getAccessToken(), request, tinkUser, accountsToUpload);
+
+                if (transactions.size() > 0) {
+
+                    try {
+
+                        tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser, transactions);
+                        registerServiceCall(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions);
+
+                    } catch (HttpClientErrorException e) {
+
+                        LOGGER.error("uploadToTink ", e);
+                        registerServiceCallWithError(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions, e);
+
+                    }
+                }
+            }
+
+            accountsByUser.clear();
+            return true;
+        } catch (Exception e) {
+
+            LOGGER.error("uploadToTink ", e);
+            return false;
+
+        }
 
     }
 
 
     private void processFile(File file) {
 
-        Map<Long, Map<String, TinkAccount>> accountsByUser = new HashMap<>();
+        Map<String, Map<String, TinkAccount>> accountsByUser = new HashMap<>();
+
+        String accountNumber = null;
+        int numberOfAccountsFound = 0;
+
+        int numberOfLinesProcessed = 0;
+        int totalLines = 0;
 
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
@@ -201,19 +360,53 @@ public class BatchJobController extends BaseController {
 
                 int type = Integer.parseInt(line.substring(33, 35));
 
+                DelimitedParserResult rawTransac = null;
                 if (type == 1) {
-                    DelimitedParserResult rawTransac = parserInfoTransaction.parserLine(line);
-                    this.processTransactionLine(accountsByUser, rawTransac);
+                    rawTransac = parserInfoTransaction.parserLine(line);
+                    if (this.processTransactionLine(accountsByUser, rawTransac)) numberOfLinesProcessed++;
 
                 } else {
-                    DelimitedParserResult rawBalance = parserInfoBalances.parserLine(line);
+                    rawTransac = parserInfoBalances.parserLine(line);
+                    if (this.processBalanceLine(accountsByUser, rawTransac)) numberOfLinesProcessed++;
 
                 }
+                String currentAccount = rawTransac.getParameterAsString(ZD4270ACCD);
+                if (accountNumber == null) accountNumber = currentAccount;
+                else if (!accountNumber.equals(currentAccount)) {
+
+
+                    accountNumber = currentAccount;
+                    numberOfAccountsFound++;
+                    if (numberOfAccountsFound > 30) {
+
+                        numberOfAccountsFound = 0;
+                        this.uploadToTink(accountsByUser);
+                    }
+
+
+                }
+                totalLines++;
 
             }
+            this.uploadToTink(accountsByUser);
+
+            BatchFile job = new BatchFile();
+            job.setFileName(file.getName());
+            job.setProcessedLines(numberOfLinesProcessed);
+            job.setFileSize(file.length());
+            job.setProcessingDate(Calendar.getInstance().getTime());
+            job.setStatus(1);
+            job.setTotalLines(totalLines);
+
+            this.batchFilesRepository.save(job);
+            this.batchFilesRepository.flush();
+
+
         } catch (Exception e) {
 
             LOGGER.error("scanBatchFilesJob ", e);
+        } finally {
+
         }
 
         //buff.append(a.getAccountFullKey());

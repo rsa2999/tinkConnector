@@ -15,6 +15,34 @@ public class BatchFile {
     private Date processingDate;
     private int status;
     private String fileHash;
+    private int totalLines;
+    private int processedLines;
+    private long fileSize;
+   
+
+    public int getTotalLines() {
+        return totalLines;
+    }
+
+    public void setTotalLines(int totalLines) {
+        this.totalLines = totalLines;
+    }
+
+    public int getProcessedLines() {
+        return processedLines;
+    }
+
+    public void setProcessedLines(int processedLines) {
+        this.processedLines = processedLines;
+    }
+
+    public long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(long fileSize) {
+        this.fileSize = fileSize;
+    }
 
     public String getFileName() {
         return fileName;

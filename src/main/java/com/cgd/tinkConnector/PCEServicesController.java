@@ -21,7 +21,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.annotation.RequestScope;
 
 import javax.servlet.http.HttpServletRequest;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -107,6 +106,7 @@ public class PCEServicesController extends BaseController {
         return ret;
     }
 
+
     private void processUpload(TransactionsUploadRequest request) {
 
         // ObjectMapper mapper = new ObjectMapper();
@@ -122,35 +122,18 @@ public class PCEServicesController extends BaseController {
             TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
             OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
 
-            Optional<TinkUsers> tinkUser = this.usersRepository.findById(request.getTinkId());
-
-            if (!tinkUser.isPresent()) {
-
-                // Get user oauth token
-                OAuthGrant userToken = tinkClient.usertoken(svcToken.getAccessToken(), request.getTinkId(), TinkClient.USER_SCOPE);
-                OAuthToken userAuth = tinkClient.token("authorization_code", null, userToken.getCode(), null);
-                tinkUser = Optional.of(tinkClient.getUser(userAuth.getAccessToken()));
-                this.usersRepository.save(tinkUser.get());
-            }
+            TinkUsers tinkUser = this.getTinkUserByTinkId(tinkClient, svcToken.getAccessToken(), request.getTinkId());
 
             List<TinkAccount> tinkAccounts = new ArrayList<>();
             List<TinkTransactionAccount> transactions = new ArrayList<>();
             String acountType = "CREDIT_CARD";
 
-            MessageDigest md = MessageDigest.getInstance("MD5");
+            // MessageDigest md = MessageDigest.getInstance("MD5");
 
 
             for (CGDAccount acc : request.getAccounts()) {
 
-                /*
-                for (CGDTransaction t : acc.getTransactions()) {
-
-                    t.setTinkId(request.getTinkId());
-                    // t.setAmount(ConversionUtils.formatAmmount(t.getAmount()));
-                }
-*/
-
-                TinkUserAccounts userAccount = new TinkUserAccounts(request.getNumClient(), acc.getNumber(), tinkUser.get().getId());
+                TinkUserAccounts userAccount = new TinkUserAccounts(request.getNumClient(), acc.getNumber(), tinkUser.getId());
                 Optional<TinkUserAccounts> dbAccount = this.accountsRepository.findById(userAccount.getId());
 
                 if (!dbAccount.isPresent()) {
@@ -158,20 +141,16 @@ public class PCEServicesController extends BaseController {
                 }
 
                 if (acc.getTransactions() != null && acc.getTransactions().size() > 0) {
-
                     transactions.add(acc.toTransactionAccount(request.getNumClient()));
                 }
 
-
             }
-
-            this.uploadAccountsToTink(tinkClient, svcToken.getAccessToken(), request, tinkUser.get(), tinkAccounts);
-
+            this.uploadAccountsToTink(tinkClient, svcToken.getAccessToken(), request, tinkUser, tinkAccounts);
 
             try {
 
-                tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser.get(), transactions);
-                registerServiceCall(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), transactions);
+                tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser, transactions);
+                registerServiceCall(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions);
 
             } catch (HttpClientErrorException e) {
 

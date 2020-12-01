@@ -1,10 +1,11 @@
 package com.cgd.tinkConnector;
 
+import com.cgd.tinkConnector.Clients.OAuthGrant;
+import com.cgd.tinkConnector.Clients.OAuthToken;
 import com.cgd.tinkConnector.Clients.TinkClient;
 import com.cgd.tinkConnector.Clients.TinkServices;
 import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
-import com.cgd.tinkConnector.Repositories.BatchFilesRepository;
 import com.cgd.tinkConnector.Repositories.TinkUserAccountsRepository;
 import com.cgd.tinkConnector.Repositories.TinkUsersRepository;
 import com.cgd.tinkConnector.Repositories.UploadRequestsRepository;
@@ -19,10 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 
 public class BaseController {
@@ -48,10 +46,6 @@ public class BaseController {
     protected TinkUserAccountsRepository accountsRepository;
 
 
-    @Autowired
-    protected BatchFilesRepository batchFilesRepository;
-
-
     protected void registerServiceCall(TransactionsUploadRequest request, int serviceId, Object payload) {
 
         this.registerServiceCall(request, serviceId, 1, payload, null);
@@ -64,6 +58,22 @@ public class BaseController {
 
     }
 
+    protected TinkUsers getTinkUserByTinkId(TinkClient tinkClient, String accessToken, String tinkId) {
+
+        Optional<TinkUsers> tinkUser = this.usersRepository.findById(tinkId);
+
+        if (!tinkUser.isPresent()) {
+
+            // Get user oauth token
+            OAuthGrant userToken = tinkClient.usertoken(accessToken, tinkId, TinkClient.USER_SCOPE);
+            OAuthToken userAuth = tinkClient.token("authorization_code", null, userToken.getCode(), null);
+            tinkUser = Optional.of(tinkClient.getUser(userAuth.getAccessToken()));
+            this.usersRepository.save(tinkUser.get());
+        }
+
+        return tinkUser.get();
+
+    }
 
     protected boolean uploadAccountsToTink(TinkClient tinkClient, String accessToken, TransactionsUploadRequest request, TinkUsers user, List<TinkAccount> tinkAccounts) {
 
@@ -80,7 +90,7 @@ public class BaseController {
             return true;
         } catch (HttpClientErrorException e) {
 
-            LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
+            LOGGER.error("processUpload", e);
             if (e.getStatusCode().value() == 409) {
                 // uma das contas ja existe ,going account by account mode
 
@@ -120,7 +130,7 @@ public class BaseController {
                 }
                 this.accountsRepository.flush();
             } catch (Exception e) {
-                LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
+                LOGGER.error("processUpload", e);
             }
 
         }
