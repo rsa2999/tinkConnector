@@ -5,8 +5,6 @@ import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
 import com.cgd.tinkConnector.PCEServicesController;
 import com.cgd.tinkConnector.entities.TinkUsers;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -223,7 +221,7 @@ public class TinkClient {
 
     public IngestTransactionsResponse ingestTransactions(String accessToken, TinkUsers user, List<TinkTransactionAccount> accounts) throws HttpClientErrorException {
 
-        
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
         headers.setBearerAuth(accessToken);
@@ -234,6 +232,7 @@ public class TinkClient {
         req.setOverridePending(false);
         req.setTransactionAccounts(accounts);
         req.setType("REAL_TIME");
+        /*
         ObjectMapper mapper = new ObjectMapper();
         try {
             String x = mapper.writeValueAsString(req);
@@ -241,7 +240,7 @@ public class TinkClient {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-
+*/
         HttpEntity<IngestTransactionsRequest> request = new HttpEntity<>(req, headers);
         ResponseEntity<IngestTransactionsResponse> response;
 

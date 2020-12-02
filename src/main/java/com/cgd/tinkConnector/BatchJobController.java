@@ -12,7 +12,6 @@ import com.cgd.tinkConnector.Model.Tink.TinkTransaction;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
 import com.cgd.tinkConnector.Model.TinkCardSubscription;
 import com.cgd.tinkConnector.Repositories.BatchFilesRepository;
-import com.cgd.tinkConnector.Repositories.TestUsersRepository;
 import com.cgd.tinkConnector.Utils.ConversionUtils;
 import com.cgd.tinkConnector.entities.BatchFile;
 import com.cgd.tinkConnector.entities.TestUsers;
@@ -91,10 +90,7 @@ public class BatchJobController extends BaseController {
     @Autowired
     protected BatchFilesRepository batchFilesRepository;
 
-    @Autowired
-    protected TestUsersRepository testUsersRepository;
-
-
+   
     private DelimitedParserInfo parserInfoTransaction;
     private DelimitedParserInfo parserInfoBalances;
 
@@ -424,9 +420,8 @@ public class BatchJobController extends BaseController {
             job.setProcessingDate(Calendar.getInstance().getTime());
             job.setStatus(1);
             job.setTotalLines(totalLines);
-
             this.batchFilesRepository.save(job);
-            this.batchFilesRepository.flush();
+//            this.batchFilesRepository.flush();
 
 
         } catch (Exception e) {
@@ -477,17 +472,18 @@ public class BatchJobController extends BaseController {
 
                         ssh.newSCPFileTransfer().download(sshFile.getPath(), localFileName);
                     }
-                    ssh.close();
-                    this.checkForFilesToProcess();
 
                 } catch (Exception e) {
 
                     LOGGER.error("scanBatchFilesJob " + sshFile.getName(), e);
+                } finally {
+
+
                 }
             }
 
             this.checkForFilesToProcess();
-            // ssh.newSCPFileTransfer().download(this.sshPath, new FileSystemFile(this.workingDirectory));
+
         } catch (Exception e) {
 
             LOGGER.error("scanBatchFilesJob ", e);
@@ -496,11 +492,15 @@ public class BatchJobController extends BaseController {
 
             this.semaphore.release();
             try {
-                if (ssh != null) ssh.disconnect();
+                if (ssh != null) {
+                    ssh.disconnect();
+                    ssh.close();
+                }
             } catch (IOException e) {
 
                 LOGGER.error("scanBatchFilesJob ", e);
             }
+            if (this.clientSubscriptions.size() > 1000) this.clientSubscriptions.clear();
         }
 
     }
@@ -519,19 +519,17 @@ public class BatchJobController extends BaseController {
             if (jobFile.isPresent()) {
                 if (jobFile.get().getStatus() == 1) continue;
             }
-
-
             this.processFile(file);
-
-
         }
 
     }
 
 
-    @Scheduled(cron = "0/10 * * * * *")
+    @Scheduled(cron = "0 * * * * *")
     @SchedulerLock(name = "cardsBatchJob")
     public void batchFileJob() {
+
+        this.scanBatchFilesJob();
 
 
     }

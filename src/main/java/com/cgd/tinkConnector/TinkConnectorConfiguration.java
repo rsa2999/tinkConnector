@@ -24,6 +24,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
@@ -40,6 +42,7 @@ import java.net.Proxy;
 import java.net.Socket;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Properties;
 
 @Configuration
 @EnableScheduling
@@ -270,6 +273,26 @@ public class TinkConnectorConfiguration {
                         .usingDbTime() // Works on Postgres, MySQL, MariaDb, MS SQL, Oracle, DB2, HSQL and H2
                         .build()
         );
+    }
+
+    @Bean
+    public JavaMailSender getJavaMailSender() {
+
+        JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
+
+        mailSender.setHost("mailhost");
+        //mailSender.setPort(587);
+
+        //mailSender.setUsername("my.gmail@gmail.com");
+        //mailSender.setPassword("password");
+
+        Properties props = mailSender.getJavaMailProperties();
+        props.put("mail.transport.protocol", "smtp");
+        props.put("mail.smtp.auth", "false");
+        props.put("mail.smtp.starttls.enable", "false");
+        props.put("mail.debug", "true");
+
+        return mailSender;
     }
 /*
     @Bean

@@ -5,6 +5,7 @@ import com.cgd.tinkConnector.Model.CGDAccount;
 import com.cgd.tinkConnector.Model.IO.*;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
+import com.cgd.tinkConnector.entities.TestUsers;
 import com.cgd.tinkConnector.entities.TinkUserAccounts;
 import com.cgd.tinkConnector.entities.TinkUsers;
 import io.swagger.annotations.ApiOperation;
@@ -12,10 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.concurrent.ConcurrentTaskExecutor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.annotation.RequestScope;
@@ -51,6 +49,34 @@ public class PCEServicesController extends BaseController {
         this.executor.execute(task);
         TransactionsUploadResponse response = new TransactionsUploadResponse();
         return response;
+    }
+
+    @GetMapping(path = "/addUser", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Receives a batch movements for upload", httpMethod = "POST")
+    public ServiceResponse addTestUser(HttpServletRequest httpServletRequest, @RequestParam String numClient, @RequestParam String tinkId) {
+
+        ServiceResponse ret = new ServiceResponse();
+        try {
+            Long numC = Long.parseLong(numClient);
+
+            if (tinkId == null || tinkId.length() == 0) return ret;
+
+            TestUsers tUser = new TestUsers();
+            tUser.setNumClient(numC);
+            tUser.setTinkUserId(tinkId);
+            this.testUsersRepository.save(tUser);
+            ret.setResultCode(1);
+
+
+        } catch (Exception e) {
+
+            LOGGER.error("addTestUser ", e);
+        }
+
+
+        return ret;
+
+
     }
 
     @PostMapping(path = "/unsubscribe", produces = MediaType.APPLICATION_JSON_VALUE)
