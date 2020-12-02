@@ -4,11 +4,12 @@ import com.cgd.tinkConnector.Utils.ConversionUtils;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.Table;
 import java.util.Date;
 
 @Entity
-@Table(name = "tinkusersaccounts")
+@Table(name = "tinkusersaccounts", indexes = {@Index(name = "idx_tinkId_2", columnList = "tinkId", unique = false)})
 public class TinkUserAccounts {
 
     @Id

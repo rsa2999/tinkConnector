@@ -12,8 +12,6 @@ public class PCEUploadRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long requestId;
-
-
     private long numClient;
     private String tinkId;
     private String subscriptionId;

@@ -4,6 +4,7 @@ import com.cgd.tinkConnector.Utils.ConversionUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
+import java.util.Map;
 
 public class TinkAccount {
 
@@ -20,7 +21,16 @@ public class TinkAccount {
 
     @JsonIgnore
     private List<TinkTransaction> transactions;
+    @JsonIgnore
+    private Map<String, Integer> transactionsByIdAndCount;
 
+    public Map<String, Integer> getTransactionsByIdAndCount() {
+        return transactionsByIdAndCount;
+    }
+
+    public void setTransactionsByIdAndCount(Map<String, Integer> transactionsByIdAndCount) {
+        this.transactionsByIdAndCount = transactionsByIdAndCount;
+    }
 
     public TinkTransactionAccount toTransactionAccount() {
 

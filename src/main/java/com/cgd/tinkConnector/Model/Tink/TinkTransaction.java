@@ -4,6 +4,7 @@ import com.cgd.tinkConnector.Model.CGDTransaction;
 import com.cgd.tinkConnector.Utils.ConversionUtils;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class TinkTransaction {
 
@@ -26,7 +27,7 @@ public class TinkTransaction {
         this.amount = ConversionUtils.formatAmmount(t.getAmount());
         this.date = t.getDate();
         this.description = t.getDescription();
-        this.externalId = ConversionUtils.generateTransactionExternalId(numClient, accountNumber, this.amount, this.description, this.date);
+        this.externalId = ConversionUtils.generateTransactionExternalId(numClient, accountNumber, this.amount, this.description, this.date, 1);
         this.payload = t.getPayload();
         this.pending = t.isPending();
         //this.tinkId = t.getTinkId();
@@ -98,5 +99,20 @@ public class TinkTransaction {
 
     public void setDate(long date) {
         this.date = date;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TinkTransaction that = (TinkTransaction) o;
+        return Float.compare(that.amount, amount) == 0 &&
+                date == that.date &&
+                Objects.equals(description, that.description);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(amount, date, description);
     }
 }

@@ -112,6 +112,9 @@ public class BaseController {
 
                 }
                 return true;
+            } else {
+                registerServiceCallWithError(request, TinkServices.INGEST_ACOUNTS.getServiceCode(), tinkAccounts, e);
+
             }
             return false;
         } finally {
@@ -130,6 +133,7 @@ public class BaseController {
                 }
                 this.accountsRepository.flush();
             } catch (Exception e) {
+                
                 LOGGER.error("processUpload", e);
             }
 
@@ -151,10 +155,11 @@ public class BaseController {
             upRequest.setRequestDate(Calendar.getInstance().getTime());
             upRequest.setSubscriptionId(request.getSubscriptionId());
             upRequest.setTinkId(request.getTinkId());
-            upRequest.setPayload(objectMapper.writeValueAsString(payload));
 
             if (error != null) {
                 upRequest.setError(objectMapper.writeValueAsString(error));
+                upRequest.setPayload(objectMapper.writeValueAsString(payload));
+
             }
 
             upRequest.setStatusCode(errorCode);

@@ -87,7 +87,7 @@ public class ConversionUtils {
 
     }
 
-    public synchronized static String generateTransactionExternalId(Long numClient, String accountNumber, float amount, String description, long date) {
+    public synchronized static String generateTransactionExternalId(Long numClient, String accountNumber, float amount, String description, long date, int position) {
         try {
             if (md == null) {
 
@@ -95,7 +95,7 @@ public class ConversionUtils {
 
             }
 
-            md.update((numClient.toString() + accountNumber + amount + description + date).getBytes());
+            md.update((numClient + accountNumber + amount + description + date + position).getBytes());
             byte[] digest = md.digest();
             return DatatypeConverter.printHexBinary(digest).toLowerCase();
 

@@ -12,8 +12,10 @@ import com.cgd.tinkConnector.Model.Tink.TinkTransaction;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
 import com.cgd.tinkConnector.Model.TinkCardSubscription;
 import com.cgd.tinkConnector.Repositories.BatchFilesRepository;
+import com.cgd.tinkConnector.Repositories.TestUsersRepository;
 import com.cgd.tinkConnector.Utils.ConversionUtils;
 import com.cgd.tinkConnector.entities.BatchFile;
+import com.cgd.tinkConnector.entities.TestUsers;
 import com.cgd.tinkConnector.entities.TinkUserAccounts;
 import com.cgd.tinkConnector.entities.TinkUsers;
 import com.cgd.tinkConnector.parser.DelimitedParserInfo;
@@ -88,6 +90,10 @@ public class BatchJobController extends BaseController {
 
     @Autowired
     protected BatchFilesRepository batchFilesRepository;
+
+    @Autowired
+    protected TestUsersRepository testUsersRepository;
+
 
     private DelimitedParserInfo parserInfoTransaction;
     private DelimitedParserInfo parserInfoBalances;
@@ -223,8 +229,23 @@ public class BatchJobController extends BaseController {
         }
 
         trans.setPending(false);
-        trans.setExternalId(ConversionUtils.generateTransactionExternalId(numClient, accountNumber, trans.getAmount(), trans.getDescription(), trans.getDate()));
+        trans.setExternalId(ConversionUtils.generateTransactionExternalId(numClient, accountNumber, trans.getAmount(), trans.getDescription(), trans.getDate(), 1));
         trans.setType("CREDIT_CARD");
+
+        if (account.getTransactionsByIdAndCount() == null) account.setTransactionsByIdAndCount(new HashMap<>());
+
+        if (account.getTransactionsByIdAndCount().containsKey(trans.getExternalId())) {
+
+            int v = account.getTransactionsByIdAndCount().get(trans.getExternalId()) + 1;
+            account.getTransactionsByIdAndCount().put(trans.getExternalId(), v);
+            trans.setExternalId(ConversionUtils.generateTransactionExternalId(numClient, accountNumber, trans.getAmount(), trans.getDescription(), trans.getDate(), v));
+
+
+        } else {
+            account.getTransactionsByIdAndCount().put(trans.getExternalId(), 1);
+        }
+
+
         account.getTransactions().add(trans);
 
         return true;
@@ -234,7 +255,7 @@ public class BatchJobController extends BaseController {
 
     private String getTinkIdForClientNumber(Long numClient) {
 
-        numClient = new Long(157103482);
+        // numClient = new Long(157103482);
 
         if (this.clientSubscriptions.containsKey(numClient)) {
 
@@ -243,6 +264,13 @@ public class BatchJobController extends BaseController {
             return tinkId;
         }
 
+        Optional<TestUsers> testUser = this.testUsersRepository.findById(numClient);
+
+        if (testUser.isPresent()) {
+
+            this.clientSubscriptions.put(numClient, testUser.get().getTinkUserId());
+            return testUser.get().getTinkUserId();
+        }
 
         CGDClient cgdClient = new CGDClient(this.cgdSvc);
 
@@ -266,7 +294,6 @@ public class BatchJobController extends BaseController {
         }
 
     }
-
 
     private boolean uploadToTink(Map<String, Map<String, TinkAccount>> accountsByUser) {
 
