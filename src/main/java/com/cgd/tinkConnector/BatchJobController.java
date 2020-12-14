@@ -90,7 +90,7 @@ public class BatchJobController extends BaseController {
     @Autowired
     protected BatchFilesRepository batchFilesRepository;
 
-   
+
     private DelimitedParserInfo parserInfoTransaction;
     private DelimitedParserInfo parserInfoBalances;
 
@@ -268,27 +268,35 @@ public class BatchJobController extends BaseController {
             return testUser.get().getTinkUserId();
         }
 
-        CGDClient cgdClient = new CGDClient(this.cgdSvc);
 
-        TinkCardSubscriptionCheckResponse response = cgdClient.checkTinkCardSubscriptions(numClient, 1);
+        try {
+            CGDClient cgdClient = new CGDClient(this.cgdSvc);
 
-        if (response.getSubscriptions() == null || response.getSubscriptions().size() == 0) {
+            TinkCardSubscriptionCheckResponse response = cgdClient.checkTinkCardSubscriptions(numClient, 1);
 
-            this.clientSubscriptions.put(numClient, "");
-            return null;
-        } else {
+            if (response.getSubscriptions() == null || response.getSubscriptions().size() == 0) {
 
-            if (!response.getSubscriptions().containsKey(numClient)) {
                 this.clientSubscriptions.put(numClient, "");
                 return null;
             } else {
 
-                TinkCardSubscription sub = response.getSubscriptions().get(numClient);
-                this.clientSubscriptions.put(numClient, sub.getTinkId());
-                return sub.getTinkId();
-            }
-        }
+                if (!response.getSubscriptions().containsKey(numClient)) {
+                    this.clientSubscriptions.put(numClient, "");
+                    return null;
+                } else {
 
+                    TinkCardSubscription sub = response.getSubscriptions().get(numClient);
+                    this.clientSubscriptions.put(numClient, sub.getTinkId());
+                    return sub.getTinkId();
+                }
+            }
+
+        } catch (Exception e) {
+
+            LOGGER.error("scanBatchFilesJob ", e);
+            this.clientSubscriptions.put(numClient, "");
+            return null;
+        }
     }
 
     private boolean uploadToTink(Map<String, Map<String, TinkAccount>> accountsByUser) {
@@ -343,7 +351,10 @@ public class BatchJobController extends BaseController {
 
                     try {
 
-                        tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser, transactions);
+                        if (activateUploadToTink) {
+
+                            tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser, transactions);
+                        }
                         registerServiceCall(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions);
 
                     } catch (HttpClientErrorException e) {
@@ -413,7 +424,12 @@ public class BatchJobController extends BaseController {
             }
             this.uploadToTink(accountsByUser);
 
-            BatchFile job = new BatchFile();
+            Optional<BatchFile> jobFile = this.batchFilesRepository.findById(file.getName());
+
+            BatchFile job;
+            if (jobFile.isPresent()) {
+                job = jobFile.get();
+            } else job = new BatchFile();
             job.setFileName(file.getName());
             job.setProcessedLines(numberOfLinesProcessed);
             job.setFileSize(file.length());
@@ -429,10 +445,8 @@ public class BatchJobController extends BaseController {
             LOGGER.error("scanBatchFilesJob ", e);
         } finally {
 
+            file.delete();
         }
-
-        //buff.append(a.getAccountFullKey());
-        //buff.append(requestContext.getSessionContext().getNumCliente());
 
 
     }

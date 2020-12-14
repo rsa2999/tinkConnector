@@ -22,7 +22,9 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -65,6 +67,50 @@ public class UserOperationsTests {
 
         final String baseUrl = BASE_URL + "/forcejob";
         URI uri = new URI(baseUrl);
+
+        HttpHeaders headers = new HttpHeaders();
+        //headers.set("Authorization", authorizationHeader);
+
+
+        HttpEntity<?> request = new HttpEntity<Object>(headers);
+        ResponseEntity<String> result = this.restTemplate.exchange(baseUrl, HttpMethod.GET, request, String.class);
+
+    }
+
+    @Test
+    public void addUser() throws URISyntaxException, JsonProcessingException {
+
+
+        Map<String, String> users = new HashMap<>();
+
+        users.put("46493834", "087d65d6b89d4b30bedf64cbd95c73f6");
+
+        users.put("115898752", "a288cdc5a8cd49119a6fc91051f419a2");
+
+        users.put("162640208", "fd11e7b50446454b9fc7cef6385fe920");
+
+        users.put("94408113", "57bb076f213f46119e1d63cb6e1e17dd");
+
+        for (String num : users.keySet()) {
+
+            String baseUrl = String.format("%s/addUser?numClient=%s&tinkId=%s", BASE_URL, num, users.get(num));
+
+            HttpHeaders headers = new HttpHeaders();
+            //headers.set("Authorization", authorizationHeader);
+
+
+            HttpEntity<?> request = new HttpEntity<Object>(headers);
+            ResponseEntity<String> result = this.restTemplate.exchange(baseUrl, HttpMethod.GET, request, String.class);
+
+        }
+
+    }
+
+    @Test
+    public void testPing() throws URISyntaxException, JsonProcessingException {
+
+
+        final String baseUrl = BASE_URL + "/pingTink";
 
         HttpHeaders headers = new HttpHeaders();
         //headers.set("Authorization", authorizationHeader);

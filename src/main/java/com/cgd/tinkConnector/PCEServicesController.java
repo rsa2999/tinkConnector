@@ -52,7 +52,7 @@ public class PCEServicesController extends BaseController {
     }
 
     @GetMapping(path = "/addUser", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ApiOperation(value = "Receives a batch movements for upload", httpMethod = "POST")
+    @ApiOperation(value = "Adds a clientNumer for testing", httpMethod = "GET")
     public ServiceResponse addTestUser(HttpServletRequest httpServletRequest, @RequestParam String numClient, @RequestParam String tinkId) {
 
         ServiceResponse ret = new ServiceResponse();
@@ -72,12 +72,32 @@ public class PCEServicesController extends BaseController {
 
             LOGGER.error("addTestUser ", e);
         }
+        return ret;
+    }
+
+    @GetMapping(path = "/pingTink", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "checks tink connectivity ", httpMethod = "GET")
+    public ServiceResponse pingTink(HttpServletRequest httpServletRequest) {
+
+        ServiceResponse ret = new ServiceResponse();
+        try {
+
+            TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
+            OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
+            ret.setResultCode(1);
+
+        } catch (Exception e) {
+
+            LOGGER.error("pingTink ", e);
+            throw e;
+        }
 
 
         return ret;
 
 
     }
+
 
     @PostMapping(path = "/unsubscribe", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "unsubscribe a user on tink ", httpMethod = "POST")
@@ -174,8 +194,11 @@ public class PCEServicesController extends BaseController {
             this.uploadAccountsToTink(tinkClient, svcToken.getAccessToken(), request, tinkUser, tinkAccounts);
 
             try {
+                if (activateUploadToTink) {
+                    tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser, transactions);
 
-                tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser, transactions);
+                }
+
                 registerServiceCall(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions);
 
             } catch (HttpClientErrorException e) {

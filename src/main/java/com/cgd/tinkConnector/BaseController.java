@@ -37,6 +37,9 @@ public class BaseController {
     @Value("${cgd.invertTransactionsSignal:true}")
     private static boolean inverTransactionsSignal;
 
+    @Value("${cgd.activateUploadToTink:false}")
+    protected boolean activateUploadToTink;
+
     @Autowired
     protected UploadRequestsRepository requestsRepository;
 
@@ -79,6 +82,8 @@ public class BaseController {
     }
 
     protected boolean uploadAccountsToTink(TinkClient tinkClient, String accessToken, TransactionsUploadRequest request, TinkUsers user, List<TinkAccount> tinkAccounts) {
+
+        if (!this.activateUploadToTink) return true;
 
         if (tinkAccounts.size() == 0) return true;
 
