@@ -5,6 +5,7 @@ import com.cgd.tinkConnector.Model.CGDAccount;
 import com.cgd.tinkConnector.Model.IO.*;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
+import com.cgd.tinkConnector.entities.PCEClientSubscription;
 import com.cgd.tinkConnector.entities.TestUsers;
 import com.cgd.tinkConnector.entities.TinkUserAccounts;
 import com.cgd.tinkConnector.entities.TinkUsers;
@@ -19,9 +20,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.annotation.RequestScope;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestScope
@@ -109,6 +108,27 @@ public class PCEServicesController extends BaseController {
         return response;
     }
 
+    @GetMapping(path = "/forcejob", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Forces batch file processing ", httpMethod = "GET")
+    public String forceBatchJob(HttpServletRequest httpServletRequest) {
+
+
+        BatchJobController.jobComponent.batchFileJob();
+
+        return null;
+    }
+
+    @GetMapping(path = "/prop", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Adds or update property configuration ", httpMethod = "GET")
+    public ServiceResponse addProperty(HttpServletRequest httpServletRequest, @RequestParam String propKey, @RequestParam String propValue) {
+
+
+        TinkConnectorConfiguration.properties.saveProperty(propKey, propValue);
+        ServiceResponse ret = new ServiceResponse();
+        ret.setResultCode(1);
+        return ret;
+    }
+
 
     private TinkUnsubscribeResponse processUnsubscribe(TinkUnsubscribeRequest request) {
 
@@ -152,16 +172,39 @@ public class PCEServicesController extends BaseController {
         return ret;
     }
 
+    private void checkSubscriptionForUploadRequest(TransactionsUploadRequest request) {
+
+
+        Optional<PCEClientSubscription> clientSubscription = this.subscriptionsRepository.findById(request.getSubscriptionId());
+
+        Date now = Calendar.getInstance().getTime();
+
+        if (!clientSubscription.isPresent()) {
+            PCEClientSubscription newSub = new PCEClientSubscription();
+            newSub.setSubscriptionId(request.getSubscriptionId());
+            newSub.setNumClient(request.getNumClient());
+            newSub.setNumContrato(request.getNumContrato());
+            newSub.setTinkUserId(request.getTinkId());
+            newSub.setSubscriptionType(request.getSubscriptionType());
+            newSub.setSubscriptionStatus(1);
+            newSub.setCreationDate(now);
+            newSub.setUpdateDate(now);
+            this.subscriptionsRepository.save(newSub);
+        } else {
+            clientSubscription.get().setUpdateDate(Calendar.getInstance().getTime());
+            clientSubscription.get().setSubscriptionStatus(1);
+            this.subscriptionsRepository.save(clientSubscription.get());
+        }
+
+    }
 
     private void processUpload(TransactionsUploadRequest request) {
-
-        // ObjectMapper mapper = new ObjectMapper();
-
-        // request.setTinkId("aa8c025e1e9947ecb48991d9b22bd479");
 
 
         boolean hasErrors = false;
         try {
+
+            this.checkSubscriptionForUploadRequest(request);
 
             //String x = mapper.writeValueAsString(request);
 

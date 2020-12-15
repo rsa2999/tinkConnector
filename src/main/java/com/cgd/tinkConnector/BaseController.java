@@ -6,10 +6,7 @@ import com.cgd.tinkConnector.Clients.TinkClient;
 import com.cgd.tinkConnector.Clients.TinkServices;
 import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
-import com.cgd.tinkConnector.Repositories.TestUsersRepository;
-import com.cgd.tinkConnector.Repositories.TinkUserAccountsRepository;
-import com.cgd.tinkConnector.Repositories.TinkUsersRepository;
-import com.cgd.tinkConnector.Repositories.UploadRequestsRepository;
+import com.cgd.tinkConnector.Repositories.*;
 import com.cgd.tinkConnector.entities.PCEUploadRequest;
 import com.cgd.tinkConnector.entities.TinkUserAccounts;
 import com.cgd.tinkConnector.entities.TinkUsers;
@@ -51,6 +48,13 @@ public class BaseController {
 
     @Autowired
     protected TestUsersRepository testUsersRepository;
+
+    @Autowired
+    protected PCEClientSubscriptionRepository subscriptionsRepository;
+
+    @Autowired
+    protected DatabasePropertiesRepository propertiesRepository;
+
 
     protected void registerServiceCall(TransactionsUploadRequest request, int serviceId, Object payload) {
 

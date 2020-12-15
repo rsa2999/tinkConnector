@@ -1,5 +1,6 @@
 package com.cgd.tinkConnector;
 
+import com.cgd.tinkConnector.Utils.DynamicProperties;
 import net.javacrumbs.shedlock.core.LockProvider;
 import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
 import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
@@ -46,8 +47,7 @@ import java.util.Properties;
 
 @Configuration
 @EnableScheduling
-
-@EnableSchedulerLock(defaultLockAtMostFor = "10m")
+@EnableSchedulerLock(defaultLockAtMostFor = "120m")
 public class TinkConnectorConfiguration {
 
 
@@ -86,8 +86,11 @@ public class TinkConnectorConfiguration {
 
     @Value("${tink.proxy.SOCKS.port:0}")
     private int tinkProxySOCKSPort;
-    @Value("${cgd.invertTransactionsSignal:true}")
+    // @Value("${cgd.invertTransactionsSignal:true}")
     public static boolean invertTransactionsSignal = true;
+
+
+    public static DynamicProperties properties;
 
     @Bean
     @Scope(value = WebApplicationContext.SCOPE_REQUEST)

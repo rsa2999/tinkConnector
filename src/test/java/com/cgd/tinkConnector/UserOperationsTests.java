@@ -83,6 +83,7 @@ public class UserOperationsTests {
 
         Map<String, String> users = new HashMap<>();
 
+        /*
         users.put("46493834", "087d65d6b89d4b30bedf64cbd95c73f6");
 
         users.put("115898752", "a288cdc5a8cd49119a6fc91051f419a2");
@@ -90,6 +91,12 @@ public class UserOperationsTests {
         users.put("162640208", "fd11e7b50446454b9fc7cef6385fe920");
 
         users.put("94408113", "57bb076f213f46119e1d63cb6e1e17dd");
+`*/
+
+        users.put("166852145", "9efa936aab9d4cbda3dd32be9cf13f85");
+        users.put("94130484", "eb052cb2f01441ac9e4554e1ef79f448");
+        users.put("99214554", "c34e9ec480e247439711fa8d65a3cdaa");
+
 
         for (String num : users.keySet()) {
 

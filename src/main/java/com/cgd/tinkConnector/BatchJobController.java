@@ -5,21 +5,19 @@ import com.cgd.tinkConnector.Clients.CGDClient;
 import com.cgd.tinkConnector.Clients.OAuthToken;
 import com.cgd.tinkConnector.Clients.TinkClient;
 import com.cgd.tinkConnector.Clients.TinkServices;
-import com.cgd.tinkConnector.Model.IO.TinkCardSubscriptionCheckResponse;
 import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransaction;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
-import com.cgd.tinkConnector.Model.TinkCardSubscription;
 import com.cgd.tinkConnector.Repositories.BatchFilesRepository;
 import com.cgd.tinkConnector.Utils.ConversionUtils;
+import com.cgd.tinkConnector.Utils.DynamicProperties;
 import com.cgd.tinkConnector.entities.BatchFile;
-import com.cgd.tinkConnector.entities.TestUsers;
 import com.cgd.tinkConnector.entities.TinkUserAccounts;
 import com.cgd.tinkConnector.entities.TinkUsers;
 import com.cgd.tinkConnector.parser.DelimitedParserInfo;
 import com.cgd.tinkConnector.parser.DelimitedParserResult;
-import io.swagger.annotations.ApiOperation;
+import com.cgd.tinkConnector.translators.*;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.sftp.RemoteResourceInfo;
@@ -29,16 +27,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.context.annotation.RequestScope;
 
-import javax.servlet.http.HttpServletRequest;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -47,12 +40,12 @@ import java.util.*;
 import java.util.concurrent.Semaphore;
 
 
-@RestController
-@RequestScope
-@RequestMapping("/api/v1")
+@Component
 public class BatchJobController extends BaseController {
 
     private static Logger LOGGER = LoggerFactory.getLogger(BatchJobController.class);
+
+    public static BatchJobController jobComponent;
 
     private static final String ZD4270CLINUM = "ZD4270-CLI-NUM";
     private static final String ZD4270ACCD = "ZD4270-AC-CD";
@@ -83,6 +76,8 @@ public class BatchJobController extends BaseController {
     @Value("${cgd.batchJob.filename:ZD4270O}")
     private String batchFilePrefix;
 
+    @Value("${cgd.disablePCESubscriptionCheck:false}")
+    private boolean disablePCESubscriptionCheck;
 
     @Value("${cgd.batchJob.workingDirectory:null}")
     private String workingDirectory;
@@ -90,13 +85,13 @@ public class BatchJobController extends BaseController {
     @Autowired
     protected BatchFilesRepository batchFilesRepository;
 
-
     private DelimitedParserInfo parserInfoTransaction;
     private DelimitedParserInfo parserInfoBalances;
 
-
     private Semaphore semaphore = new Semaphore(1);
     private Map<Long, String> clientSubscriptions = new HashMap<>();
+
+    private TinkUsersTranslator usersTranslator;
 
     public BatchJobController(RestTemplate cgdRestTemplateBatch, RestTemplate tinkRestTemplateBatch, String clientId, String clientSecret) {
 
@@ -104,19 +99,10 @@ public class BatchJobController extends BaseController {
         this.tinkSvc = tinkRestTemplateBatch;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
-
         this.initParser();
+        jobComponent = this;
+        TinkConnectorConfiguration.properties = new DynamicProperties(this.propertiesRepository);
 
-
-    }
-
-    @GetMapping(path = "/forcejob", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ApiOperation(value = "Forces batch file processing ", httpMethod = "GET")
-    public String forceBatchJob(HttpServletRequest httpServletRequest) {
-
-        scanBatchFilesJob();
-
-        return null;
     }
 
 
@@ -149,7 +135,7 @@ public class BatchJobController extends BaseController {
 
     private TinkAccount getTinkTransactionAccountByUser(Map<String, Map<String, TinkAccount>> accountsByUser, Long numClient, String accountNumber, String plasticNumber) {
 
-        String tinkId = getTinkIdForClientNumber(numClient);
+        String tinkId = this.usersTranslator.getTinkIdForClientNumber(numClient);
 
         if (tinkId == null) return null;
 
@@ -249,6 +235,53 @@ public class BatchJobController extends BaseController {
 
     }
 
+    /*
+
+    private void getTinkIdForClientNumber(List<Long> numClients) {
+
+        if (this.clientSubscriptions == null) {
+
+            List<TestUsers> testUsers = this.testUsersRepository.findAll();
+            this.clientSubscriptions = new HashMap<>();
+
+            for (TestUsers u : testUsers) {
+                this.clientSubscriptions.put(u.getNumClient(), u.getTinkUserId());
+            }
+        }
+
+        try {
+            CGDClient cgdClient = new CGDClient(this.cgdSvc);
+
+
+            TinkCardSubscriptionCheckResponse response = cgdClient.checkTinkCardSubscriptions(numClients, 1);
+
+            if (response.getSubscriptions() == null || response.getSubscriptions().size() == 0) {
+                return;
+            }
+
+            for (Long num : numClients) {
+
+                if (response.getSubscriptions().containsKey(num)) {
+
+                    TinkCardSubscription sub = response.getSubscriptions().get(num);
+                    this.clientSubscriptions.put(num, sub.getTinkId());
+                } else {
+                    this.clientSubscriptions.put(num, "");
+
+                }
+
+            }
+
+        } catch (Exception e) {
+
+            LOGGER.error("scanBatchFilesJob ", e);
+
+
+        }
+
+
+    }
+
     private String getTinkIdForClientNumber(Long numClient) {
 
         // numClient = new Long(157103482);
@@ -266,6 +299,12 @@ public class BatchJobController extends BaseController {
 
             this.clientSubscriptions.put(numClient, testUser.get().getTinkUserId());
             return testUser.get().getTinkUserId();
+        }
+
+        if (disablePCESubscriptionCheck) {
+
+            this.clientSubscriptions.put(numClient, "");
+            return null;
         }
 
 
@@ -298,6 +337,8 @@ public class BatchJobController extends BaseController {
             return null;
         }
     }
+
+     */
 
     private boolean uploadToTink(Map<String, Map<String, TinkAccount>> accountsByUser) {
 
@@ -378,7 +419,54 @@ public class BatchJobController extends BaseController {
     }
 
 
+    private void processFileForNumClients(File file) {
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+
+            List<Long> numClients = new ArrayList<>();
+
+            while ((line = br.readLine()) != null) {
+
+                int type = Integer.parseInt(line.substring(33, 35));
+
+                DelimitedParserResult rawTransac = null;
+
+                if (type == 1) {
+                    rawTransac = parserInfoTransaction.parserLine(line);
+
+
+                } else {
+                    rawTransac = parserInfoBalances.parserLine(line);
+
+                }
+                Long numClient = rawTransac.getParameterAsLong(ZD4270CLINUM);
+
+                if (!numClients.contains(numClient)) {
+                    numClients.add(numClient);
+                }
+
+                if (numClients.size() > 1000) {
+
+                    this.usersTranslator.getTinkIdForClientNumber(numClients);
+                    numClients.clear();
+                }
+
+            }
+
+        } catch (Exception e) {
+
+            LOGGER.error("scanBatchFilesJob ", e);
+        } finally {
+
+
+        }
+    }
+
     private void processFile(File file) {
+
+
+        //this.processFileForNumClients(file);
 
         Map<String, Map<String, TinkAccount>> accountsByUser = new HashMap<>();
 
@@ -395,15 +483,22 @@ public class BatchJobController extends BaseController {
                 int type = Integer.parseInt(line.substring(33, 35));
 
                 DelimitedParserResult rawTransac = null;
+                totalLines++;
                 if (type == 1) {
                     rawTransac = parserInfoTransaction.parserLine(line);
-                    if (this.processTransactionLine(accountsByUser, rawTransac)) numberOfLinesProcessed++;
+                    if (!this.processTransactionLine(accountsByUser, rawTransac)) {
+                        continue;
+                    }
 
                 } else {
                     rawTransac = parserInfoBalances.parserLine(line);
-                    if (this.processBalanceLine(accountsByUser, rawTransac)) numberOfLinesProcessed++;
+                    if (!this.processBalanceLine(accountsByUser, rawTransac)) {
+                        continue;
+                    }
 
                 }
+                numberOfLinesProcessed++;
+
                 String currentAccount = rawTransac.getParameterAsString(ZD4270ACCD);
                 if (accountNumber == null) accountNumber = currentAccount;
                 else if (!accountNumber.equals(currentAccount)) {
@@ -419,7 +514,7 @@ public class BatchJobController extends BaseController {
 
 
                 }
-                totalLines++;
+
 
             }
             this.uploadToTink(accountsByUser);
@@ -466,7 +561,6 @@ public class BatchJobController extends BaseController {
             //   ssh.loadKnownHosts();
             ssh.connect(this.sshHost);
 
-            //ssh.authPublickey(System.getProperty("user.name"));
             ssh.authPassword(this.sshUserName, this.sshPassword);
             SFTPClient sftpClient = ssh.newSFTPClient();
 
@@ -490,13 +584,10 @@ public class BatchJobController extends BaseController {
                 } catch (Exception e) {
 
                     LOGGER.error("scanBatchFilesJob " + sshFile.getName(), e);
-                } finally {
-
-
                 }
+
             }
 
-            this.checkForFilesToProcess();
 
         } catch (Exception e) {
 
@@ -504,7 +595,6 @@ public class BatchJobController extends BaseController {
 
         } finally {
 
-            this.semaphore.release();
             try {
                 if (ssh != null) {
                     ssh.disconnect();
@@ -514,8 +604,21 @@ public class BatchJobController extends BaseController {
 
                 LOGGER.error("scanBatchFilesJob ", e);
             }
-            if (this.clientSubscriptions.size() > 1000) this.clientSubscriptions.clear();
+
+            this.checkForFilesToProcess();
+            this.semaphore.release();
+
+            this.clientSubscriptions = null;
         }
+
+    }
+
+    private Date extractDatefromFileName(String filename) {
+
+        String[] comps = filename.split("\\.");
+        //ZD4270O.D20201212.T101711
+
+        return ConversionUtils.stringToDate(comps[1].substring(1));
 
     }
 
@@ -524,6 +627,7 @@ public class BatchJobController extends BaseController {
         File folder = new File(this.workingDirectory);
         File[] listOfFiles = folder.listFiles();
 
+        List<File> filesToProcess = new ArrayList<>();
         for (File file : listOfFiles) {
 
             if (!file.isFile()) continue;
@@ -533,13 +637,70 @@ public class BatchJobController extends BaseController {
             if (jobFile.isPresent()) {
                 if (jobFile.get().getStatus() == 1) continue;
             }
-            this.processFile(file);
+            filesToProcess.add(file);
+           
         }
+
+        if (filesToProcess.size() > 0) {
+
+            filesToProcess.sort(new Comparator<File>() {
+                @Override
+                public int compare(File o1, File o2) {
+
+                    return extractDatefromFileName(o1.getName()).compareTo(extractDatefromFileName(o2.getName()));
+                }
+            });
+
+            this.initUserTranslator();
+
+            for (File file : filesToProcess) this.processFile(file);
+
+        }
+
+
+    }
+
+    private void initUserTranslator() {
+
+        if (!TinkConnectorConfiguration.properties.existsProperty(DynamicProperties.CGD_USER_TRANSLATION_TYPE)) {
+
+            TinkConnectorConfiguration.properties.saveProperty(DynamicProperties.CGD_USER_TRANSLATION_TYPE, "4");
+        }
+
+        int userTranslationType = TinkConnectorConfiguration.properties.getPropertyAsInteger(DynamicProperties.CGD_USER_TRANSLATION_TYPE);
+
+        UserTranslatorType translatorType = UserTranslatorType.fromValue((short) userTranslationType);
+
+        switch (translatorType) {
+
+            case TEST_USERS_ONLY:
+
+                this.usersTranslator = new TestUsersOnlyUserTranslator(this.testUsersRepository);
+                break;
+
+            case PCE_SINGLE_USER:
+
+                this.usersTranslator = new PCEBasedSingleUserTranslator(new CGDClient(this.cgdSvc), this.testUsersRepository);
+                break;
+
+            case PCE_SUSCRIPTIONS_SYNC:
+
+                this.usersTranslator = new PCEBasedSyncSubscriptionsUserTranslator(new CGDClient(this.cgdSvc), this.testUsersRepository, this.subscriptionsRepository);
+                break;
+
+            case LOCAL_SUBSCRIPTION:
+
+                this.usersTranslator = new LocalSubscriptionsUserTranslator(this.testUsersRepository, this.subscriptionsRepository);
+                break;
+
+        }
+
 
     }
 
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(cron = "00 45 * * * *")
+    // @Scheduled(fixedRate = 60 * 60 * 1000)
     @SchedulerLock(name = "cardsBatchJob")
     public void batchFileJob() {
 
@@ -547,4 +708,14 @@ public class BatchJobController extends BaseController {
 
 
     }
+/*
+    @Scheduled(cron = "0/10 * * * * *")
+    public void batchFileJob2() {
+
+        System.out.println("job");
+
+
+    }
+    */
+
 }

@@ -36,14 +36,12 @@ public class CGDClient {
         return headers;
     }
 
-    public TinkCardSubscriptionCheckResponse checkTinkCardSubscriptions(Long numClient, int subscriptionType) {
+    public TinkCardSubscriptionCheckResponse checkTinkCardSubscriptions(List<Long> numClient, int subscriptionType) {
 
         HttpHeaders headers = this.getHeaders();
 
-
         TinkCardSubscriptionCheckRequest req = new TinkCardSubscriptionCheckRequest();
-        req.setClientNumbers(new ArrayList<>());
-        req.getClientNumbers().add(numClient);
+        req.setClientNumbers(numClient);
         req.setSubscriptionType(subscriptionType);
 
         HttpEntity<TinkCardSubscriptionCheckRequest> request = new HttpEntity<>(req, headers);
@@ -55,6 +53,15 @@ public class CGDClient {
 
         return response.getBody();
 
+
+    }
+
+    public TinkCardSubscriptionCheckResponse checkTinkCardSubscriptions(Long numClient, int subscriptionType) {
+
+        List<Long> clients = new ArrayList<>();
+        clients.add(numClient);
+
+        return checkTinkCardSubscriptions(clients, subscriptionType);
 
     }
 
