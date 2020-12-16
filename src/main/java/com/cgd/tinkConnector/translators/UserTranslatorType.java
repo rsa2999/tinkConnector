@@ -3,7 +3,7 @@ package com.cgd.tinkConnector.translators;
 public enum UserTranslatorType {
 
 
-    PCE_SINGLE_USER(1), LOCAL_SUBSCRIPTION(2), PCE_SUSCRIPTIONS_SYNC(3), TEST_USERS_ONLY(4);
+    PCE_SINGLE_USER(1), LOCAL_SUBSCRIPTION(2), PCE_SUSCRIPTIONS_SYNC(3), TEST_USERS_ONLY(4), PCE_GROUPED_USER(5);
 
     private final long code;
 

@@ -8,9 +8,17 @@ import java.util.List;
 
 public class PCEBasedSyncSubscriptionsUserTranslator extends TinkUsersTranslator {
 
+    private PCEClientSubscriptionRepository subscriptionsRepository;
+
+    private CGDClient cgdClient;
 
     public PCEBasedSyncSubscriptionsUserTranslator(CGDClient cgdClient, TestUsersRepository testUsers, PCEClientSubscriptionRepository subscriptions) {
 
+        this.testUsers = testUsers;
+        subscriptionsRepository = subscriptions;
+        this.cgdClient = cgdClient;
+
+        this.init();
 
     }
 
@@ -25,8 +33,4 @@ public class PCEBasedSyncSubscriptionsUserTranslator extends TinkUsersTranslator
         return null;
     }
 
-    @Override
-    public boolean requiresPreprocessing() {
-        return false;
-    }
 }

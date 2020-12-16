@@ -12,6 +12,7 @@ public class TestUsersOnlyUserTranslator extends TinkUsersTranslator {
     public TestUsersOnlyUserTranslator(TestUsersRepository testUsers) {
 
         this.testUsers = testUsers;
+        this.init();
     }
 
 
@@ -22,12 +23,8 @@ public class TestUsersOnlyUserTranslator extends TinkUsersTranslator {
 
     @Override
     public String getTinkIdForClientNumber(Long numClient) {
-        return null;
+
+        return this.getTinkIdForNumClient(numClient);
     }
 
-    @Override
-    public boolean requiresPreprocessing() {
-
-        return false;
-    }
 }

@@ -92,6 +92,7 @@ public class BatchJobController extends BaseController {
     private Map<Long, String> clientSubscriptions = new HashMap<>();
 
     private TinkUsersTranslator usersTranslator;
+    private UserTranslatorType translatorType;
 
     public BatchJobController(RestTemplate cgdRestTemplateBatch, RestTemplate tinkRestTemplateBatch, String clientId, String clientSecret) {
 
@@ -446,7 +447,7 @@ public class BatchJobController extends BaseController {
                     numClients.add(numClient);
                 }
 
-                if (numClients.size() > 1000) {
+                if (numClients.size() > 2000) {
 
                     this.usersTranslator.getTinkIdForClientNumber(numClients);
                     numClients.clear();
@@ -465,8 +466,10 @@ public class BatchJobController extends BaseController {
 
     private void processFile(File file) {
 
+        if (this.translatorType == UserTranslatorType.PCE_GROUPED_USER) {
 
-        //this.processFileForNumClients(file);
+            this.processFileForNumClients(file);
+        }
 
         Map<String, Map<String, TinkAccount>> accountsByUser = new HashMap<>();
 
@@ -638,7 +641,7 @@ public class BatchJobController extends BaseController {
                 if (jobFile.get().getStatus() == 1) continue;
             }
             filesToProcess.add(file);
-           
+
         }
 
         if (filesToProcess.size() > 0) {
@@ -669,7 +672,7 @@ public class BatchJobController extends BaseController {
 
         int userTranslationType = TinkConnectorConfiguration.properties.getPropertyAsInteger(DynamicProperties.CGD_USER_TRANSLATION_TYPE);
 
-        UserTranslatorType translatorType = UserTranslatorType.fromValue((short) userTranslationType);
+        this.translatorType = UserTranslatorType.fromValue((short) userTranslationType);
 
         switch (translatorType) {
 
@@ -691,6 +694,10 @@ public class BatchJobController extends BaseController {
             case LOCAL_SUBSCRIPTION:
 
                 this.usersTranslator = new LocalSubscriptionsUserTranslator(this.testUsersRepository, this.subscriptionsRepository);
+                break;
+
+            case PCE_GROUPED_USER:
+                this.usersTranslator = new PCEBasedGroupedUserTranslator(new CGDClient(this.cgdSvc), this.testUsersRepository);
                 break;
 
         }
