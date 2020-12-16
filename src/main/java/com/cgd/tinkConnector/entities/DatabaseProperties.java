@@ -1,12 +1,14 @@
 package com.cgd.tinkConnector.entities;
 
 import javax.persistence.Entity;
+import javax.persistence.Id;
 import javax.persistence.Table;
 
 @Entity
 @Table(name = "properties")
 public class DatabaseProperties {
 
+    @Id
     private String key;
     private String value;
 

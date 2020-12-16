@@ -6,9 +6,7 @@ import java.util.List;
 
 public class TestUsersOnlyUserTranslator extends TinkUsersTranslator {
 
-    private TestUsersRepository testUsers;
-
-
+   
     public TestUsersOnlyUserTranslator(TestUsersRepository testUsers) {
 
         this.testUsers = testUsers;

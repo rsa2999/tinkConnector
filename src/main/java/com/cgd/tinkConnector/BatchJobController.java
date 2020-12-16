@@ -102,7 +102,7 @@ public class BatchJobController extends BaseController {
         this.clientSecret = clientSecret;
         this.initParser();
         jobComponent = this;
-        TinkConnectorConfiguration.properties = new DynamicProperties(this.propertiesRepository);
+
 
     }
 
@@ -664,6 +664,12 @@ public class BatchJobController extends BaseController {
     }
 
     private void initUserTranslator() {
+
+        if (TinkConnectorConfiguration.properties == null) {
+
+            TinkConnectorConfiguration.properties = new DynamicProperties(this.propertiesRepository);
+        }
+
 
         if (!TinkConnectorConfiguration.properties.existsProperty(DynamicProperties.CGD_USER_TRANSLATION_TYPE)) {
 

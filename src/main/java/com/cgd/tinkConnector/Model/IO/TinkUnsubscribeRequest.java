@@ -5,7 +5,6 @@ public class TinkUnsubscribeRequest {
     private long numClient;
     private String tinkId;
     private String subscriptionId;
-
     private int subscriptionType;
     private long numContrato;
 
