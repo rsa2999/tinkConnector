@@ -18,7 +18,24 @@ public class BatchFile {
     private int totalLines;
     private int processedLines;
     private long fileSize;
-   
+    private long processingTime;
+    private float coverage;
+
+    public float getCoverage() {
+        return coverage;
+    }
+
+    public void setCoverage(float coverage) {
+        this.coverage = coverage;
+    }
+
+    public long getProcessingTime() {
+        return processingTime;
+    }
+
+    public void setProcessingTime(long processingTime) {
+        this.processingTime = processingTime;
+    }
 
     public int getTotalLines() {
         return totalLines;

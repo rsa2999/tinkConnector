@@ -1,33 +1,55 @@
 package com.cgd.tinkConnector.entities;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import javax.persistence.*;
 import java.util.Date;
 
 @Entity
 @Table(name = "pceuploadsrequests",
-        indexes = {@Index(name = "idx_num_client", columnList = "numClient", unique = false), @Index(name = "idx_tinkId", columnList = "tinkId", unique = false)})
+        indexes = {@Index(name = "idx_num_client", columnList = "numClient", unique = false),
+                @Index(name = "idx_tinkId", columnList = "tinkId", unique = false),
+                @Index(name = "idx_payloadHash", columnList = "payloadHash,serviceId,statusCode", unique = false)})
 public class PCEUploadRequest {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @JsonIgnore
     private Long requestId;
     private long numClient;
+    @JsonIgnore
     private String tinkId;
     private String subscriptionId;
     private Date requestDate;
     private int statusCode;
-
+    private String payloadHash;
     @Lob
+    @JsonIgnore
     private String payload;
-
     @Lob
     private String error;
-
     private int serviceId;
+    private int responseCode;
 
     public String getPayload() {
         return payload;
+    }
+
+    public int getResponseCode() {
+        return responseCode;
+    }
+
+    public void setResponseCode(int responseCode) {
+        this.responseCode = responseCode;
+    }
+
+    public String getPayloadHash() {
+        return payloadHash;
+    }
+
+    public void setPayloadHash(String payloadHash) {
+        this.payloadHash = payloadHash;
     }
 
     public void setPayload(String payload) {

@@ -5,10 +5,8 @@ import com.cgd.tinkConnector.Model.CGDAccount;
 import com.cgd.tinkConnector.Model.IO.*;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
-import com.cgd.tinkConnector.entities.PCEClientSubscription;
-import com.cgd.tinkConnector.entities.TestUsers;
-import com.cgd.tinkConnector.entities.TinkUserAccounts;
-import com.cgd.tinkConnector.entities.TinkUsers;
+import com.cgd.tinkConnector.Utils.DynamicProperties;
+import com.cgd.tinkConnector.entities.*;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,12 +36,14 @@ public class PCEServicesController extends BaseController {
         this.clientSecret = clientSecret;
         this.executor = new ConcurrentTaskExecutor();
 
+
     }
 
     @PostMapping(path = "/uploadTransactions", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Receives a batch movements for upload", httpMethod = "POST")
     public TransactionsUploadResponse uploadTransactions(HttpServletRequest httpServletRequest, @RequestBody TransactionsUploadRequest request) {
 
+        this.initDynamicProperties();
         Runnable task = () -> processUpload(request);
         this.executor.execute(task);
         TransactionsUploadResponse response = new TransactionsUploadResponse();
@@ -118,12 +118,52 @@ public class PCEServicesController extends BaseController {
         return null;
     }
 
+
+    @GetMapping(path = "/userlog", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Adds or update property configuration ", httpMethod = "GET")
+    public UserInteractionsResponse getUserInteractions(HttpServletRequest httpServletRequest, @RequestParam Long numContrato) {
+
+        UserInteractionsResponse ret = new UserInteractionsResponse();
+
+        List<PCEClientSubscription> subs = this.subscriptionsRepository.findByNumContrato(numContrato);
+
+        if (subs.isEmpty()) {
+
+            return ret;
+
+        }
+
+        List<PCEUploadRequest> requests = new ArrayList<>();
+        for (PCEClientSubscription sub : subs) {
+
+            List<PCEUploadRequest> r = this.requestsRepository.findByTinkId(sub.getTinkUserId());
+            requests.addAll(r);
+        }
+        requests.sort((o1, o2) -> o2.getRequestDate().compareTo(o1.getRequestDate()));
+
+
+        ret.setRequests(requests);
+        ret.setSubscriptions(subs);
+        return ret;
+    }
+
     @GetMapping(path = "/prop", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Adds or update property configuration ", httpMethod = "GET")
     public ServiceResponse addProperty(HttpServletRequest httpServletRequest, @RequestParam String propKey, @RequestParam String propValue) {
 
-
+        this.initDynamicProperties();
         TinkConnectorConfiguration.properties.saveProperty(propKey, propValue);
+        ServiceResponse ret = new ServiceResponse();
+        ret.setResultCode(1);
+        return ret;
+    }
+
+    @GetMapping(path = "/reload", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "Reload current config", httpMethod = "GET")
+    public ServiceResponse reloadProperties(HttpServletRequest httpServletRequest) {
+
+        this.initDynamicProperties();
+        TinkConnectorConfiguration.properties.reset();
         ServiceResponse ret = new ServiceResponse();
         ret.setResultCode(1);
         return ret;
@@ -191,6 +231,7 @@ public class PCEServicesController extends BaseController {
             newSub.setUpdateDate(now);
             this.subscriptionsRepository.save(newSub);
         } else {
+
             clientSubscription.get().setUpdateDate(Calendar.getInstance().getTime());
             clientSubscription.get().setSubscriptionStatus(1);
             this.subscriptionsRepository.save(clientSubscription.get());
@@ -206,7 +247,6 @@ public class PCEServicesController extends BaseController {
 
             this.checkSubscriptionForUploadRequest(request);
 
-            //String x = mapper.writeValueAsString(request);
 
             TinkClient tinkClient = new TinkClient(tinkSvc, clientId, clientSecret);
             OAuthToken svcToken = tinkClient.token("client_credentials", TinkClient.ALL_SCOPES, null, null);
@@ -237,7 +277,11 @@ public class PCEServicesController extends BaseController {
             this.uploadAccountsToTink(tinkClient, svcToken.getAccessToken(), request, tinkUser, tinkAccounts);
 
             try {
-                if (activateUploadToTink) {
+                if (TinkConnectorConfiguration.properties.getPropertyAsBoolean(DynamicProperties.CGD_ACTIVATE_UPLOAD_TO_TINK)) {
+
+                    boolean isValid = validatePayloadBeforeUpload(TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions);
+
+
                     tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser, transactions);
 
                 }
@@ -247,7 +291,7 @@ public class PCEServicesController extends BaseController {
             } catch (HttpClientErrorException e) {
 
                 LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
-                registerServiceCallWithError(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions, e);
+                registerServiceCallWithError(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), e.getStatusCode().value(), transactions, e);
                 hasErrors = true;
             }
 

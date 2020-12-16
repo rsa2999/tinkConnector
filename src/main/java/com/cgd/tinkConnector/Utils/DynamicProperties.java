@@ -10,6 +10,9 @@ import java.util.Optional;
 public class DynamicProperties {
 
     public static String CGD_USER_TRANSLATION_TYPE = "cgd.userTranslationType";
+    public static String CGD_ACTIVATE_UPLOAD_TO_TINK = "cgd.activateUploadToTink";
+    public static String CGD_ACTIVATE_BATCH_FILE_PROCESSING = "cgd.activateBatcheFileProcessing";
+
 
     private DatabasePropertiesRepository repository;
 
@@ -63,7 +66,7 @@ public class DynamicProperties {
         return null;
     }
 
-    public void clear() {
+    public void reset() {
 
         this.cachedProperties.clear();
     }
@@ -76,6 +79,7 @@ public class DynamicProperties {
         prop.setKey(propKey);
         prop.setValue(propValue);
         this.cachedProperties.put(propKey, prop);
+        this.repository.save(prop);
         return true;
 
     }

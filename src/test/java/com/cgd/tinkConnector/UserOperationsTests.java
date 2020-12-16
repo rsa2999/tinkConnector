@@ -62,6 +62,22 @@ public class UserOperationsTests {
     }
 
     @Test
+    public void testProperties() throws URISyntaxException, JsonProcessingException {
+
+
+        final String baseUrl = BASE_URL + "/prop?propKey=cgd.activateBatcheFileProcessing&propValue=true";
+        URI uri = new URI(baseUrl);
+
+        HttpHeaders headers = new HttpHeaders();
+        //headers.set("Authorization", authorizationHeader);
+
+
+        HttpEntity<?> request = new HttpEntity<Object>(headers);
+        ResponseEntity<String> result = this.restTemplate.exchange(baseUrl, HttpMethod.GET, request, String.class);
+
+    }
+
+    @Test
     public void testJob() throws URISyntaxException, JsonProcessingException {
 
 

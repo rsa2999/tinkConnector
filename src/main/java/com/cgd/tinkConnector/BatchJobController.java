@@ -227,119 +227,10 @@ public class BatchJobController extends BaseController {
         } else {
             account.getTransactionsByIdAndCount().put(trans.getExternalId(), 1);
         }
-
-
         account.getTransactions().add(trans);
-
         return true;
-
-
     }
 
-    /*
-
-    private void getTinkIdForClientNumber(List<Long> numClients) {
-
-        if (this.clientSubscriptions == null) {
-
-            List<TestUsers> testUsers = this.testUsersRepository.findAll();
-            this.clientSubscriptions = new HashMap<>();
-
-            for (TestUsers u : testUsers) {
-                this.clientSubscriptions.put(u.getNumClient(), u.getTinkUserId());
-            }
-        }
-
-        try {
-            CGDClient cgdClient = new CGDClient(this.cgdSvc);
-
-
-            TinkCardSubscriptionCheckResponse response = cgdClient.checkTinkCardSubscriptions(numClients, 1);
-
-            if (response.getSubscriptions() == null || response.getSubscriptions().size() == 0) {
-                return;
-            }
-
-            for (Long num : numClients) {
-
-                if (response.getSubscriptions().containsKey(num)) {
-
-                    TinkCardSubscription sub = response.getSubscriptions().get(num);
-                    this.clientSubscriptions.put(num, sub.getTinkId());
-                } else {
-                    this.clientSubscriptions.put(num, "");
-
-                }
-
-            }
-
-        } catch (Exception e) {
-
-            LOGGER.error("scanBatchFilesJob ", e);
-
-
-        }
-
-
-    }
-
-    private String getTinkIdForClientNumber(Long numClient) {
-
-        // numClient = new Long(157103482);
-
-        if (this.clientSubscriptions.containsKey(numClient)) {
-
-            String tinkId = this.clientSubscriptions.get(numClient);
-            if (tinkId.length() == 0) return null;
-            return tinkId;
-        }
-
-        Optional<TestUsers> testUser = this.testUsersRepository.findById(numClient);
-
-        if (testUser.isPresent()) {
-
-            this.clientSubscriptions.put(numClient, testUser.get().getTinkUserId());
-            return testUser.get().getTinkUserId();
-        }
-
-        if (disablePCESubscriptionCheck) {
-
-            this.clientSubscriptions.put(numClient, "");
-            return null;
-        }
-
-
-        try {
-            CGDClient cgdClient = new CGDClient(this.cgdSvc);
-
-            TinkCardSubscriptionCheckResponse response = cgdClient.checkTinkCardSubscriptions(numClient, 1);
-
-            if (response.getSubscriptions() == null || response.getSubscriptions().size() == 0) {
-
-                this.clientSubscriptions.put(numClient, "");
-                return null;
-            } else {
-
-                if (!response.getSubscriptions().containsKey(numClient)) {
-                    this.clientSubscriptions.put(numClient, "");
-                    return null;
-                } else {
-
-                    TinkCardSubscription sub = response.getSubscriptions().get(numClient);
-                    this.clientSubscriptions.put(numClient, sub.getTinkId());
-                    return sub.getTinkId();
-                }
-            }
-
-        } catch (Exception e) {
-
-            LOGGER.error("scanBatchFilesJob ", e);
-            this.clientSubscriptions.put(numClient, "");
-            return null;
-        }
-    }
-
-     */
 
     private boolean uploadToTink(Map<String, Map<String, TinkAccount>> accountsByUser) {
 
@@ -393,7 +284,8 @@ public class BatchJobController extends BaseController {
 
                     try {
 
-                        if (activateUploadToTink) {
+
+                        if (TinkConnectorConfiguration.properties.getPropertyAsBoolean(DynamicProperties.CGD_ACTIVATE_UPLOAD_TO_TINK)) {
 
                             tinkClient.ingestTransactions(svcToken.getAccessToken(), tinkUser, transactions);
                         }
@@ -402,7 +294,7 @@ public class BatchJobController extends BaseController {
                     } catch (HttpClientErrorException e) {
 
                         LOGGER.error("uploadToTink ", e);
-                        registerServiceCallWithError(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), transactions, e);
+                        registerServiceCallWithError(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), e.getStatusCode().value(), transactions, e);
 
                     }
                 }
@@ -466,6 +358,8 @@ public class BatchJobController extends BaseController {
 
     private void processFile(File file) {
 
+        Calendar start = Calendar.getInstance();
+
         if (this.translatorType == UserTranslatorType.PCE_GROUPED_USER) {
 
             this.processFileForNumClients(file);
@@ -506,7 +400,6 @@ public class BatchJobController extends BaseController {
                 if (accountNumber == null) accountNumber = currentAccount;
                 else if (!accountNumber.equals(currentAccount)) {
 
-
                     accountNumber = currentAccount;
                     numberOfAccountsFound++;
                     if (numberOfAccountsFound > 30) {
@@ -514,14 +407,9 @@ public class BatchJobController extends BaseController {
                         numberOfAccountsFound = 0;
                         this.uploadToTink(accountsByUser);
                     }
-
-
                 }
-
-
             }
             this.uploadToTink(accountsByUser);
-
             Optional<BatchFile> jobFile = this.batchFilesRepository.findById(file.getName());
 
             BatchFile job;
@@ -534,8 +422,13 @@ public class BatchJobController extends BaseController {
             job.setProcessingDate(Calendar.getInstance().getTime());
             job.setStatus(1);
             job.setTotalLines(totalLines);
+            job.setProcessingTime(Calendar.getInstance().getTimeInMillis() - start.getTimeInMillis() / (1000 * 60));
+
+            if (totalLines == 0) job.setCoverage(0);
+            else {
+                job.setCoverage(numberOfLinesProcessed / (float) totalLines);
+            }
             this.batchFilesRepository.save(job);
-//            this.batchFilesRepository.flush();
 
 
         } catch (Exception e) {
@@ -552,6 +445,12 @@ public class BatchJobController extends BaseController {
 
     private void scanBatchFilesJob() {
 
+        this.initDynamicProperties();
+
+        if (!TinkConnectorConfiguration.properties.getPropertyAsBoolean(DynamicProperties.CGD_ACTIVATE_BATCH_FILE_PROCESSING)) {
+
+            return;
+        }
 
         SSHClient ssh = null;
         try {
@@ -624,8 +523,6 @@ public class BatchJobController extends BaseController {
     private Date extractDatefromFileName(String filename) {
 
         String[] comps = filename.split("\\.");
-        //ZD4270O.D20201212.T101711
-
         return ConversionUtils.stringToDate(comps[1].substring(1));
 
     }
@@ -651,38 +548,17 @@ public class BatchJobController extends BaseController {
 
         if (filesToProcess.size() > 0) {
 
-            filesToProcess.sort(new Comparator<File>() {
-                @Override
-                public int compare(File o1, File o2) {
-
-                    return extractDatefromFileName(o1.getName()).compareTo(extractDatefromFileName(o2.getName()));
-                }
-            });
-
+            filesToProcess.sort(Comparator.comparing(o -> extractDatefromFileName(o.getName())));
             this.initUserTranslator();
-
             for (File file : filesToProcess) this.processFile(file);
-
         }
-
-
     }
 
     private void initUserTranslator() {
 
-        if (TinkConnectorConfiguration.properties == null) {
-
-            TinkConnectorConfiguration.properties = new DynamicProperties(this.propertiesRepository);
-        }
-
-
-        if (!TinkConnectorConfiguration.properties.existsProperty(DynamicProperties.CGD_USER_TRANSLATION_TYPE)) {
-
-            TinkConnectorConfiguration.properties.saveProperty(DynamicProperties.CGD_USER_TRANSLATION_TYPE, "4");
-        }
+        this.initDynamicProperties();
 
         int userTranslationType = TinkConnectorConfiguration.properties.getPropertyAsInteger(DynamicProperties.CGD_USER_TRANSLATION_TYPE);
-
         this.translatorType = UserTranslatorType.fromValue((short) userTranslationType);
 
         switch (translatorType) {
@@ -726,14 +602,6 @@ public class BatchJobController extends BaseController {
 
 
     }
-/*
-    @Scheduled(cron = "0/10 * * * * *")
-    public void batchFileJob2() {
 
-        System.out.println("job");
-
-
-    }
-    */
 
 }
