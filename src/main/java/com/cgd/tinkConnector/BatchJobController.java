@@ -89,7 +89,7 @@ public class BatchJobController extends BaseController {
     private DelimitedParserInfo parserInfoBalances;
 
     private Semaphore semaphore = new Semaphore(1);
-    private Map<Long, String> clientSubscriptions = new HashMap<>();
+    // private Map<Long, String> clientSubscriptions = new HashMap<>();
 
     private TinkUsersTranslator usersTranslator;
     private UserTranslatorType translatorType;
@@ -611,7 +611,12 @@ public class BatchJobController extends BaseController {
             this.checkForFilesToProcess();
             this.semaphore.release();
 
-            this.clientSubscriptions = null;
+            if (this.usersTranslator != null) {
+
+                this.usersTranslator.clear();
+                this.usersTranslator = null;
+            }
+
         }
 
     }
