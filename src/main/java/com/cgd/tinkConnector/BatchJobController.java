@@ -593,7 +593,7 @@ public class BatchJobController extends BaseController {
     }
 
 
-    @Scheduled(cron = "00 45 * * * *")
+    @Scheduled(cron = "00 50 * * * *")
     // @Scheduled(fixedRate = 60 * 60 * 1000)
     @SchedulerLock(name = "cardsBatchJob")
     public void batchFileJob() {

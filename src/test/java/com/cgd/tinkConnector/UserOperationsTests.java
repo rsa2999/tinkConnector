@@ -65,8 +65,11 @@ public class UserOperationsTests {
     public void testProperties() throws URISyntaxException, JsonProcessingException {
 
 
-        final String baseUrl = BASE_URL + "/prop?propKey=cgd.activateBatcheFileProcessing&propValue=true";
+        final String baseUrl = BASE_URL + "/prop?propKey=cgd.activateUploadToTink&propValue=true";
+
+        //final String baseUrl = BASE_URL + "/prop?propKey=cgd.activateBatcheFileProcessing&propValue=true";
         URI uri = new URI(baseUrl);
+
 
         HttpHeaders headers = new HttpHeaders();
         //headers.set("Authorization", authorizationHeader);

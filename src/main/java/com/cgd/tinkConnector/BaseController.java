@@ -122,7 +122,7 @@ public class BaseController {
         if (TinkConnectorConfiguration.properties == null) {
 
             TinkConnectorConfiguration.properties = new DynamicProperties(this.propertiesRepository);
-            
+
             if (!TinkConnectorConfiguration.properties.existsProperty(DynamicProperties.CGD_ACTIVATE_UPLOAD_TO_TINK)) {
 
                 TinkConnectorConfiguration.properties.saveProperty(DynamicProperties.CGD_ACTIVATE_UPLOAD_TO_TINK, "false");
@@ -225,6 +225,8 @@ public class BaseController {
             upRequest.setSubscriptionId(request.getSubscriptionId());
             upRequest.setTinkId(request.getTinkId());
             upRequest.setPayload(objectMapper.writeValueAsString(payload));
+            upRequest.setServiceId(serviceId);
+            upRequest.setResponseCode(responseCode);
 
             if (error != null) {
                 upRequest.setError(objectMapper.writeValueAsString(error));

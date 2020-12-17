@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.cgd.tinkConnector'
-version = '0.0.1-SNAPSHOT'
+version = '1.0.0'
 sourceCompatibility = 1.8
 
 repositories {
@@ -13,12 +13,7 @@ repositories {
 }
 
 dependencies {
-// https://mvnrepository.com/artifact/net.javacrumbs.shedlock/shedlock-spring
-    // compile group: 'net.javacrumbs.shedlock', name: 'shedlock-spring', version: '4.15.1'
-/*
-    < artifactId > shedlock - provider - jdbc - template < /artifactId>
-    <version>4.15.1</ version >
-*/
+
     implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:4.15.1'
     implementation 'net.javacrumbs.shedlock:shedlock-spring:4.15.1'
     implementation 'com.hierynomus:sshj:0.30.0'
