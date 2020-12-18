@@ -151,5 +151,20 @@ public class CGDAccount {
         return ac;
     }
 
-
+    @Override
+    public String toString() {
+        return "CGDAccount{" +
+                "availableCredit=" + availableCredit +
+                ", balance=" + balance +
+                ", reservedAmount=" + reservedAmount +
+                ", closed=" + closed +
+                ", exclusion='" + exclusion + '\'' +
+                ", externalId='" + externalId + '\'' +
+                ", flags=" + flags +
+                ", name='" + name + '\'' +
+                ", number='" + number + '\'' +
+                ", plasticNumber='" + plasticNumber + '\'' +
+                ", transactions=" + transactions +
+                '}';
+    }
 }

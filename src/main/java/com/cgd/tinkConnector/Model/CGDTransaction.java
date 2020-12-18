@@ -77,4 +77,18 @@ public class CGDTransaction {
     public void setType(String type) {
         this.type = type;
     }
+
+    @Override
+    public String toString() {
+        return "CGDTransaction{" +
+                "amount=" + amount +
+                ", date=" + date +
+                ", description='" + description + '\'' +
+                ", externalId='" + externalId + '\'' +
+                ", payload=" + payload +
+                ", pending=" + pending +
+                ", tinkId='" + tinkId + '\'' +
+                ", type='" + type + '\'' +
+                '}';
+    }
 }

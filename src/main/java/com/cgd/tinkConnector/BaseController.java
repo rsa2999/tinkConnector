@@ -59,6 +59,9 @@ public class BaseController {
     @Autowired
     protected DatabasePropertiesRepository propertiesRepository;
 
+    @Autowired
+    protected BatchFilesRepository batchFilesRepository;
+
 
     protected void registerServiceCall(TransactionsUploadRequest request, int serviceId, Object payload) {
 

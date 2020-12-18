@@ -52,18 +52,38 @@ public class PCEServicesController extends BaseController {
 
     @GetMapping(path = "/addUser", produces = MediaType.APPLICATION_JSON_VALUE)
     @ApiOperation(value = "Adds a clientNumer for testing", httpMethod = "GET")
-    public ServiceResponse addTestUser(HttpServletRequest httpServletRequest, @RequestParam String numClient, @RequestParam String tinkId) {
+    public ServiceResponse addTestUser(HttpServletRequest httpServletRequest, @RequestParam Long numClient, @RequestParam String tinkId) {
 
         ServiceResponse ret = new ServiceResponse();
         try {
-            Long numC = Long.parseLong(numClient);
+            // Long numC = Long.parseLong(numClient);
 
             if (tinkId == null || tinkId.length() == 0) return ret;
 
             TestUsers tUser = new TestUsers();
-            tUser.setNumClient(numC);
+            tUser.setNumClient(numClient);
             tUser.setTinkUserId(tinkId);
             this.testUsersRepository.save(tUser);
+            ret.setResultCode(1);
+
+
+        } catch (Exception e) {
+
+            LOGGER.error("addTestUser ", e);
+        }
+        return ret;
+    }
+
+    @GetMapping(path = "/removeUser", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "removes a client for testing", httpMethod = "GET")
+    public ServiceResponse removeTestUser(HttpServletRequest httpServletRequest, @RequestParam Long numClient) {
+
+        ServiceResponse ret = new ServiceResponse();
+        try {
+
+            this.testUsersRepository.deleteById(numClient);
+
+
             ret.setResultCode(1);
 
 
@@ -95,6 +115,17 @@ public class PCEServicesController extends BaseController {
         return ret;
 
 
+    }
+
+    @GetMapping(path = "/logsJob", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiOperation(value = "gets job logs", httpMethod = "GET")
+    public BatchJobLogResponse getBatchLog(HttpServletRequest httpServletRequest) {
+
+        BatchJobLogResponse ret = new BatchJobLogResponse();
+        ret.setProcessedJobs(this.batchFilesRepository.findAll());
+        ret.getProcessedJobs().sort((o1, o2) -> o2.getProcessingDate().compareTo(o1.getProcessingDate()));
+
+        return ret;
     }
 
 
@@ -140,7 +171,6 @@ public class PCEServicesController extends BaseController {
             requests.addAll(r);
         }
         requests.sort((o1, o2) -> o2.getRequestDate().compareTo(o1.getRequestDate()));
-
 
         ret.setRequests(requests);
         ret.setSubscriptions(subs);

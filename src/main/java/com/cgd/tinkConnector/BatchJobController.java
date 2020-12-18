@@ -9,7 +9,6 @@ import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransaction;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
-import com.cgd.tinkConnector.Repositories.BatchFilesRepository;
 import com.cgd.tinkConnector.Utils.ConversionUtils;
 import com.cgd.tinkConnector.Utils.DynamicProperties;
 import com.cgd.tinkConnector.entities.BatchFile;
@@ -25,7 +24,6 @@ import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -82,9 +80,7 @@ public class BatchJobController extends BaseController {
     @Value("${cgd.batchJob.workingDirectory:null}")
     private String workingDirectory;
 
-    @Autowired
-    protected BatchFilesRepository batchFilesRepository;
-
+   
     private DelimitedParserInfo parserInfoTransaction;
     private DelimitedParserInfo parserInfoBalances;
 
