@@ -6,7 +6,9 @@ import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
 import com.cgd.tinkConnector.Utils.ConversionUtils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CGDAccount {
 
@@ -129,8 +131,22 @@ public class CGDAccount {
         ac.setExternalId(ConversionUtils.generateAccountExternalId(clientNumber, this.getNumber()));
         List<TinkTransaction> transactions = new ArrayList<>();
 
+        Map<String, Integer> transactionsByIdAndCount = new HashMap<>();
+
         for (CGDTransaction t : this.transactions) {
-            transactions.add(new TinkTransaction(clientNumber, this.getNumber(), t));
+
+            TinkTransaction trans = new TinkTransaction(clientNumber, this.getNumber(), t);
+
+            if (transactionsByIdAndCount.containsKey(trans.getExternalId())) {
+
+                int v = transactionsByIdAndCount.get(trans.getExternalId()) + 1;
+                transactionsByIdAndCount.put(trans.getExternalId(), v);
+                trans.setExternalId(ConversionUtils.generateTransactionExternalId(clientNumber, this.getNumber(), trans.getAmount(), trans.getDescription(), trans.getDate(), v));
+            } else {
+                transactionsByIdAndCount.put(trans.getExternalId(), 1);
+            }
+
+            transactions.add(trans);
         }
         ac.setTransactions(transactions);
         return ac;

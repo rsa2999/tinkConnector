@@ -6,13 +6,17 @@ import com.cgd.tinkConnector.Clients.TinkClient;
 import com.cgd.tinkConnector.Clients.TinkServices;
 import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
-import com.cgd.tinkConnector.Repositories.*;
+import com.cgd.tinkConnector.Repositories.BatchFilesRepository;
+import com.cgd.tinkConnector.Repositories.DatabasePropertiesRepository;
+import com.cgd.tinkConnector.Repositories.PCEClientSubscriptionRepository;
+import com.cgd.tinkConnector.Repositories.TestUsersRepository;
+import com.cgd.tinkConnector.Repositories.TinkUserAccountsRepository;
+import com.cgd.tinkConnector.Repositories.TinkUsersRepository;
+import com.cgd.tinkConnector.Repositories.UploadRequestsRepository;
 import com.cgd.tinkConnector.Utils.DynamicProperties;
 import com.cgd.tinkConnector.entities.PCEUploadRequest;
 import com.cgd.tinkConnector.entities.TinkUserAccounts;
 import com.cgd.tinkConnector.entities.TinkUsers;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,8 +25,11 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.xml.bind.DatatypeConverter;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 
 public class BaseController {
@@ -35,11 +42,6 @@ public class BaseController {
     protected String clientId;
     protected String clientSecret;
 
-    //@Value("${cgd.invertTransactionsSignal:true}")
-    // private static boolean inverTransactionsSignal;
-
-    //@Value("${cgd.activateUploadToTink:false}")
-    //protected boolean activateUploadToTink;
 
     @Autowired
     protected UploadRequestsRepository requestsRepository;
@@ -97,11 +99,11 @@ public class BaseController {
         if (payload == null) return false;
 
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        // ObjectMapper objectMapper = new ObjectMapper();
 
         String json = null;
         try {
-            json = objectMapper.writeValueAsString(payload);
+            json = payload.toString();
             MessageDigest md = MessageDigest.getInstance("MD5");
             md.update(json.getBytes());
             byte[] digest = md.digest();
@@ -111,7 +113,7 @@ public class BaseController {
             return requests.isEmpty();
 
 
-        } catch (JsonProcessingException | NoSuchAlgorithmException e) {
+        } catch (Exception e) {
 
             LOGGER.error("validatePayloadBeforeUpload", e);
             return false;
@@ -176,6 +178,7 @@ public class BaseController {
                         tinkClient.ingestAccounts(accessToken, user.getExternalUserId(), testAccount);
 
                     } catch (HttpClientErrorException e1) {
+
                         if (e.getStatusCode().value() == 409) {
 
                             accountsToSave.add(a);
@@ -221,18 +224,18 @@ public class BaseController {
 
         try {
 
-            ObjectMapper objectMapper = new ObjectMapper();
+            //   ObjectMapper objectMapper = new ObjectMapper();
             PCEUploadRequest upRequest = new PCEUploadRequest();
             upRequest.setNumClient(request.getNumClient());
             upRequest.setRequestDate(Calendar.getInstance().getTime());
             upRequest.setSubscriptionId(request.getSubscriptionId());
             upRequest.setTinkId(request.getTinkId());
-            upRequest.setPayload(objectMapper.writeValueAsString(payload));
+            upRequest.setPayload(payload.toString()); //objectMapper.writeValueAsString(payload));
             upRequest.setServiceId(serviceId);
             upRequest.setResponseCode(responseCode);
 
             if (error != null) {
-                upRequest.setError(objectMapper.writeValueAsString(error));
+                upRequest.setError(error.toString());//objectMapper.writeValueAsString(error));
 
             }
             if (upRequest.getPayload() != null) {

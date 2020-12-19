@@ -1,24 +1,47 @@
 package com.cgd.tinkConnector;
 
-import com.cgd.tinkConnector.Clients.*;
+import com.cgd.tinkConnector.Clients.CGDClient;
+import com.cgd.tinkConnector.Clients.OAuthGrant;
+import com.cgd.tinkConnector.Clients.OAuthToken;
+import com.cgd.tinkConnector.Clients.TinkClient;
+import com.cgd.tinkConnector.Clients.TinkServices;
 import com.cgd.tinkConnector.Model.CGDAccount;
-import com.cgd.tinkConnector.Model.IO.*;
+import com.cgd.tinkConnector.Model.IO.BatchJobLogResponse;
+import com.cgd.tinkConnector.Model.IO.ServiceResponse;
+import com.cgd.tinkConnector.Model.IO.TinkUnsubscribeRequest;
+import com.cgd.tinkConnector.Model.IO.TinkUnsubscribeResponse;
+import com.cgd.tinkConnector.Model.IO.TransactionsUploadRequest;
+import com.cgd.tinkConnector.Model.IO.TransactionsUploadResponse;
+import com.cgd.tinkConnector.Model.IO.UserInteractionsResponse;
 import com.cgd.tinkConnector.Model.Tink.TinkAccount;
 import com.cgd.tinkConnector.Model.Tink.TinkTransactionAccount;
 import com.cgd.tinkConnector.Utils.DynamicProperties;
-import com.cgd.tinkConnector.entities.*;
+import com.cgd.tinkConnector.entities.PCEClientSubscription;
+import com.cgd.tinkConnector.entities.PCEUploadRequest;
+import com.cgd.tinkConnector.entities.TestUsers;
+import com.cgd.tinkConnector.entities.TinkUserAccounts;
+import com.cgd.tinkConnector.entities.TinkUsers;
 import io.swagger.annotations.ApiOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.concurrent.ConcurrentTaskExecutor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.annotation.RequestScope;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestScope
@@ -219,7 +242,7 @@ public class PCEServicesController extends BaseController {
             this.usersRepository.save(tinkUser.get());
         }
 
-        TinkUserCredentialResponse response = tinkClient.getUserCredentials(userAuth.getAccessToken());
+        //   TinkUserCredentialResponse response = tinkClient.getUserCredentials(userAuth.getAccessToken());
 
         List<TinkUserAccounts> accounts = this.accountsRepository.findByTinkId(request.getTinkId());
 
@@ -287,9 +310,6 @@ public class PCEServicesController extends BaseController {
             List<TinkTransactionAccount> transactions = new ArrayList<>();
             String acountType = "CREDIT_CARD";
 
-            // MessageDigest md = MessageDigest.getInstance("MD5");
-
-
             for (CGDAccount acc : request.getAccounts()) {
 
                 TinkUserAccounts userAccount = new TinkUserAccounts(request.getNumClient(), acc.getNumber(), tinkUser.getId());
@@ -320,7 +340,7 @@ public class PCEServicesController extends BaseController {
 
             } catch (HttpClientErrorException e) {
 
-                LOGGER.error(String.format("processUpload : subscription %s", request.getSubscriptionId()), e);
+                LOGGER.error(String.format("processUpload - transactions: subscription %s", request.getSubscriptionId()), e);
                 registerServiceCallWithError(request, TinkServices.INGEST_TRANSACTIONS.getServiceCode(), e.getStatusCode().value(), transactions, e);
                 hasErrors = true;
             }

@@ -30,7 +30,6 @@ public class TinkTransaction {
         this.externalId = ConversionUtils.generateTransactionExternalId(numClient, accountNumber, this.amount, this.description, this.date, 1);
         this.payload = t.getPayload();
         this.pending = t.isPending();
-        //this.tinkId = t.getTinkId();
         this.type = t.getType();
 
     }
@@ -114,5 +113,19 @@ public class TinkTransaction {
     @Override
     public int hashCode() {
         return Objects.hash(amount, date, description);
+    }
+
+    @Override
+    public String toString() {
+        return "TinkTransaction{" +
+                "amount=" + amount +
+                ", date=" + date +
+                ", description='" + description + '\'' +
+                ", externalId='" + externalId + '\'' +
+                ", payload=" + payload +
+                ", pending=" + pending +
+                ", tinkId='" + tinkId + '\'' +
+                ", type='" + type + '\'' +
+                '}';
     }
 }
